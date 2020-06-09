@@ -1,0 +1,7 @@
+datastore:
+  cls: lsst.daf.butler.datastores.posixDatastore.PosixDatastore
+  records:
+    table: posix_datastore_records
+  root: <butlerRoot>
+registry:
+  db: postgresql://ccdbtcl02.in2p3.fr:6546/lsst
