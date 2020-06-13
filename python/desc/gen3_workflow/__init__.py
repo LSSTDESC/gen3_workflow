@@ -1,1 +1,1 @@
-from .gen3_workflow import *
+from .gen2_cl_generator import *
