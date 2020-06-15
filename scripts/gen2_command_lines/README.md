@@ -1,7 +1,8 @@
 This folder contains example scripts that run the coadd/multiband pipe
 tasks for tract 3828 using the existing visit-level data at NERSC.
 
-To use the code in this repo, it needs to be set up with eups:
+To use the code in this folder, the repo/branch needs to be set up
+with eups:
 
 ```
 $ cd <to your working directory>
