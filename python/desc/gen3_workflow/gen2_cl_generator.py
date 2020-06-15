@@ -89,10 +89,11 @@ class CommandLineGenerator:
         Return the per-visit command lines for the specified pipe task,
         tract, and patch.  Currently only used for `makeCoaddTempExp`.
         """
-        commands = []
+        commands = dict()
         for band in self.bands:
             visits = self.get_visits(tract, patch, band)
             for visit in visits:
+                key = band, tract, patch, visit
                 log_name = f'{pipe_task}_{tract}_{patch}_v{visit}-{band}'
                 log_file = os.path.join(self.log_dir, f'{log_name}.log')
                 mprof_file = os.path.join(self.log_dir, f'mprof_{log_name}.dat')
@@ -103,7 +104,7 @@ class CommandLineGenerator:
                            f'--selectId visit={visit} '
                            f'{config_file_option(f"{pipe_task}.py")}'
                            f'--no-versions --longlog) >& {log_file}')
-                commands.append(command)
+                commands[key] = command
         return commands
 
     def get_visit_list_cls(self, pipe_task, rerun_dir, tract, patch):
@@ -112,8 +113,9 @@ class CommandLineGenerator:
         visits for the specified pipe task, tract, and patch.  Currently
         only used for `assembleCoadd`.
         """
-        commands = []
+        commands = dict()
         for band in self.bands:
+            key = band, tract, patch
             visits = [str(_) for _ in self.get_visits(tract, patch, band)]
             visit_list = '^'.join(visits)
             log_name = f'{pipe_task}_{tract}_{patch}_{band}'
@@ -126,7 +128,7 @@ class CommandLineGenerator:
                        f'--selectId visit={visit_list} '
                        f'{config_file_option(f"{pipe_task}.py")}'
                        f'--no-versions --longlog) >& {log_file}')
-            commands.append(command)
+            commands[key] = command
         return commands
 
     def get_ftp_cls(self, pipe_task, rerun_dir, tract, patch):
@@ -136,8 +138,9 @@ class CommandLineGenerator:
         and patch.  Used for `detectCoaddSources`, `deblendCoaddSources`,
         `measureCoaddSources`, and `forcedPhotCoadd`.
         """
-        commands = []
+        commands = dict()
         for band in self.bands:
+            key = band, tract, patch
             log_name = f'{pipe_task}_{tract}_{patch}_{band}'
             log_file = os.path.join(self.log_dir, f'{log_name}.log')
             mprof_file = os.path.join(self.log_dir, f'mprof_{log_name}.dat')
@@ -147,7 +150,7 @@ class CommandLineGenerator:
                        f'tract={tract} patch={patch} '
                        f'{config_file_option(f"{pipe_task}.py")}'
                        f'--no-versions --longlog) >& {log_file}')
-            commands.append(command)
+            commands[key] = command
         return commands
 
     def get_merge_task_cl(self, pipe_task, rerun_dir, tract, patch):
