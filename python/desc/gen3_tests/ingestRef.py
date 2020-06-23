@@ -18,7 +18,7 @@ def makeTask(butler: Butler):
     config.datasetIncludePatterns = ["ref_cat"]
     return ConvertRepoTask(config=config, butler3=butler)
 
-root3 = 'Run2.2i-gen3'
+root3 = 'Run2.2i-gen3_24'
 root2 = '/sps/lsst/data/boutigny/DC2/Run2.2i'
 butler = Butler(root3, run="refcats")
 task = makeTask(butler)
