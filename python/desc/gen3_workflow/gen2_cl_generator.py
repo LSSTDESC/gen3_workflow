@@ -11,12 +11,14 @@ import lsst.daf.persistence as dp
 __all__ = ['CommandLineGenerator', 'dispatch_commands']
 
 
-def config_file_option(pipe_task):
+def config_file_option(pipe_task, package_dir=None):
     """
     Produce the `--configfile ...` option for the specified pipe_task
     using the config file in obs_lsst/config.
     """
-    configfile = os.path.join(os.environ['OBS_LSST_DIR'], 'config', pipe_task)
+    if package_dir is None:
+        package_dir = os.environ['OBS_LSST_DIR']
+    configfile = os.path.join(package_dir, 'config', pipe_task)
     if os.path.isfile(configfile):
         return f'--configfile {configfile} '
     return ''
@@ -171,6 +173,32 @@ class CommandLineGenerator:
                    f'--no-versions --longlog) >& {log_file}')
         return command
 
+    def get_metacal_cls(self, rerun_dir, tract, patch, filters='g^r^i^z',
+                        ipp_dir=None):
+        if ipp_dir is None:
+            ipp_dir = '/global/u1/j/jchiang8/dev/ImageProcessingPipelines'
+        filter_config = os.path.join(ipp_dir, 'config', 'mcal-filters.py')
+        task_names = ('mcalmax', 'ngmix')
+        pipe_tasks = ('processDeblendedCoaddsMetacalMax',
+                      'processDeblendedCoaddsNGMixMax')
+        task_configs = ('ngmix-deblended-mcalmax.py',
+                        'ngmix-deblended-bd.py')
+        commands = []
+        for task_name, pipe_task, task_config in zip(task_names, pipe_tasks,
+                                                     task_configs):
+            log_name = f'{pipe_task}_{tract}_{patch}'
+            log_file = os.path.join(self.log_dir, f'{log_name}.log')
+            mprof_file = os.path.join(self.log_dir, f'mprof_{log_name}.dat')
+            prefix = f'time mprof run --output {mprof_file}'
+            ipp_config = os.path.join(ipp_dir, 'config', task_config)
+            command = (f'({prefix} {pipe_task}.py {self.repo} '
+                       f'--rerun {rerun_dir} '
+                       f'--id filter={filters} tract={tract} patch={patch} '
+                       f'--configfile {filter_config} '
+                       f'--configfile {ipp_config} '
+                       f'--no-versions --longlog) >& {log_file}')
+            commands.append(command)
+        return {(tract, patch): commands}
 
 def dispatch_commands(commands, processes=25, dry_run=False):
     """

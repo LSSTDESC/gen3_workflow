@@ -72,6 +72,26 @@ class Gen2Products:
         return (os.path.join(coadd_dir, f'{patch}.fits'),
                 os.path.join(coadd_dir, f'{patch}_nImage.fits'))
 
+    def metacal_outputs(self, tract, patch):
+        """
+        Parameters
+        ----------
+        tract: int
+            Tract number.
+        patch: str
+            Patch id, e.g., '0,0'.
+
+        Returns
+        -------
+        (<mcalmax filepath>, <ngmix filepath>)
+        """
+        results_dir = os.path.join(self.rerun_dir, 'deepCoadd-results',
+                                   'merged', str(tract), patch)
+        return (os.path.join(results_dir,
+                             f'mcalmax-deblended-{tract}-{patch}.fits'),
+                os.path.join(results_dir,
+                             f'ngmix-deblended-{tract}-{patch}.fits'))
+
     def ftp_task_outputs(self, pipe_task, band, tract, patch):
         """
         Function to return filepaths of FITS data products for pipe tasks
