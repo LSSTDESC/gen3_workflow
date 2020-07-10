@@ -92,7 +92,7 @@ def putSkyMap(butler: Butler, instrument: Instrument):
     butler.put(skyMap, datasetType, skymap="rings", run=run)
 
 
-def run(root: str, *, tracts: List[int], filters: List[str],
+def run(root: str, *, tracts: List[int], filters: List[str], instrument: Instrument,
         create: bool = False, clobber: bool = False, continue_: bool = False):
     if create:
         if continue_:
@@ -103,13 +103,13 @@ def run(root: str, *, tracts: List[int], filters: List[str],
             else:
                 raise ValueError("Repo exists and --clobber=False.")
         Butler.makeRepo(root)
-    butler = Butler(root, run="raw/imsim")
+    butler = Butler(root, run=instrument.makeDefaultRawIngestRunName())
     task = makeTask(butler, continue_=continue_)
     task.run(
         root=GEN2_RAW_ROOT,
         #reruns=['run2.2i-coadd-wfd-dr6-v1'],
         reruns=[],
-        calibs=({"CALIB": "calib/imsim"} if not continue_ else None),
+        calibs=({"CALIB": instrument.makeCollectionName("calib")} if not continue_ else None),
         visits=makeVisitList(tracts, filters)
     )
     #if not continue_:
@@ -144,7 +144,7 @@ def main():
     filters = options.filter if options.filter else list("ugrizy")
     configureLogging(options.verbose)
     run(options.root, tracts=tracts, filters=filters, create=options.create, clobber=options.clobber,
-        continue_=options.continue_)
+        continue_=options.continue_, instrument=LsstImSim())
 
 
 if __name__ == "__main__":
