@@ -70,7 +70,8 @@ def makeTask(butler: Butler, *, continue_: bool = False):
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, config)
     config.instrument = "lsst.obs.lsst.LsstImSim"
     config.relatedOnly = True
-    config.transfer = "symlink"
+    #config.transfer = "symlink"
+    config.transfer = "auto"
     config.datasetIncludePatterns = ["flat", "bias", "dark", "fringe", "SKY",
                                      "ref_cat", "raw"]
     config.datasetIgnorePatterns.append("*_camera")
