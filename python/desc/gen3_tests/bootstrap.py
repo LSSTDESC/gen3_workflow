@@ -68,7 +68,7 @@ def makeTask(butler: Butler, *, continue_: bool = False):
     instrument = LsstImSim()
     config = ConvertRepoTask.ConfigClass()
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, config)
-    config.instrument = "lsst.obs.lsst.LsstImSim"
+    #config.instrument = "lsst.obs.lsst.LsstImSim"
     config.relatedOnly = True
     #config.transfer = "symlink"
     config.transfer = "auto"
@@ -78,7 +78,7 @@ def makeTask(butler: Butler, *, continue_: bool = False):
     config.fileIgnorePatterns.extend(["*.log", "*.png", "rerun*"])
     config.doRegisterInstrument = not continue_
     config.doWriteCuratedCalibrations = not continue_
-    return ConvertRepoTask(config=config, butler3=butler)
+    return ConvertRepoTask(config=config, butler3=butler, instrument=instrument)
 
 
 def putSkyMap(butler: Butler, instrument: Instrument):

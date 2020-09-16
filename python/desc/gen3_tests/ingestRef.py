@@ -11,18 +11,19 @@ def makeTask(butler: Butler):
     instrument = LsstImSim()
     config = ConvertRepoTask.ConfigClass()
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, config)
-    config.instrument = "lsst.obs.lsst.LsstImSim"
+    #config.instrument = "lsst.obs.lsst.LsstImSim"
     config.refCats = ["cal_ref_cat"]
     config.relatedOnly = True
     config.transfer = "symlink"
     config.datasetIncludePatterns = ["ref_cat"]
-    return ConvertRepoTask(config=config, butler3=butler)
+    return ConvertRepoTask(config=config, butler3=butler, instrument=instrument)
 
-root3 = 'Run2.2i-gen3_24'
+root3 = 'Run2.2i-gen3-dcache-pg-36'
 root2 = '/sps/lsst/data/boutigny/DC2/Run2.2i'
 butler = Butler(root3, run="refcats")
 task = makeTask(butler)
-rootRepoConverter = RootRepoConverter(task=task, root=root2)
+instrument = LsstImSim()
+rootRepoConverter = RootRepoConverter(task=task, root=root2, instrument=instrument)
 rootRepoConverter.prep() 
 listOfFileDataset = list(rootRepoConverter.iterDatasets())
 
