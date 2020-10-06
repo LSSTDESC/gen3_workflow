@@ -1,0 +1,6 @@
+description: DRP
+inherits:
+  - location: $GEN3_WORKFLOW_DIR/pipelines/ProcessCcd.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/Coaddition.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/Multiband.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/Forced.yaml
