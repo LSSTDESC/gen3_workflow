@@ -8,7 +8,7 @@ pipetask qgraph \
    -b gen3-repo/butler.yaml \
    --skip-existing \
    --instrument lsst.obs.lsst.LsstImSim \
-   --pipeline pipelines/${pipeline}.yaml \
+   --pipeline ${GEN3_WORKFLOW_DIR}/pipelines/${pipeline}.yaml \
    --save-qgraph ${pipeline}.pickle \
    --qgraph-dot ${pipeline}.dot
 
