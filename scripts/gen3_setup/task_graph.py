@@ -3,15 +3,17 @@ import sys
 import re
 import time
 import pickle
+import itertools
 import subprocess
 import configparser
 import numpy as np
 import networkx
-from lsst.daf.butler import DimensionUniverse
-from lsst.pipe.base import QuantumGraph, QuantumGraphTaskNodes
+from lsst.daf.butler import DimensionUniverse, Butler
+from lsst.pipe.base import QuantumGraph
 
 FILENODE = 0
 TASKNODE = 1
+
 
 def pretty_dataset_label(orig_name):
     """Tweak dataset for a label
@@ -29,6 +31,7 @@ def pretty_dataset_label(orig_name):
     new_name = re.sub(r",", "\n", new_name)
     new_name = re.sub(r"[\{\}]", "", new_name)
     return new_name
+
 
 class PipelineGraph:
     def __init__(self, qgraph_file):
@@ -57,83 +60,77 @@ class PipelineGraph:
         """
         self.sci_graph = networkx.DiGraph()
         ncnt = 0
-        tcnt = 0
         dcnt = 0
         dsname_to_node_id = {}
         self.qgnodes = {}
         pipeline = []
-        for task_id, nodes in enumerate(self.qgraph):
-            task_def = nodes.taskDef
+        for task_id, node in enumerate(self.qgraph):
+            task_def = node.taskDef
             pipeline.append(task_def.label)
-            for quantum in nodes.quanta:
-                ncnt += 1
-                tcnt += 1
-                tnode_name = "task%d (%s)" % (ncnt, task_def.taskName)
-                #tnode_name = "%06d" % (ncnt)
-                self.sci_graph.add_node(
-                    tnode_name,
-                    node_type=TASKNODE,
-                    task_def_id=task_id,
-                    task_abbrev=task_def.label,
-                    shape="box",
-                    fillcolor="gray",
-                    # style='"filled,bold"',
-                    style="filled",
-                    label=".".join(task_def.taskName.split(".")[-2:]),
-                )
-                quanta2 = [quantum]
-                self.qgnodes[tnode_name] \
-                    = QuantumGraphTaskNodes(task_def, quanta2,
-                                            quantum.initInputs, {})
+            ncnt += 1
+            tnode_name = "task%d (%s)" % (ncnt, task_def.taskName)
+            self.sci_graph.add_node(
+                tnode_name,
+                node_type=TASKNODE,
+                task_def_id=task_id,
+                task_abbrev=task_def.label,
+                shape="box",
+                fillcolor="gray",
+                # style='"filled,bold"',
+                style="filled",
+                label=".".join(task_def.taskName.split(".")[-2:]),
+            )
+            self.qgnodes[tnode_name] = node
+            inputs, outputs = node.quantum.inputs, node.quantum.outputs
+            # Make dataset ref nodes for inputs
+            for ds_ref in itertools.chain.from_iterable(inputs.values()):
+                ds_name = f"{ds_ref.datasetType.name}+{ds_ref.dataId}"
+                if ds_name not in dsname_to_node_id:
+                    ncnt += 1
+                    dcnt += 1
+                    fnode_name = f"ds{dcnt:06d}"
+                    dsname_to_node_id[ds_name] = fnode_name
+                    fnode_label = pretty_dataset_label(ds_name)
+                    self.sci_graph.add_node(
+                        fnode_name, node_type=FILENODE,
+                        label=fnode_label, shape="box", style="rounded"
+                    )
+                fnode_name = dsname_to_node_id[ds_name]
+                self.sci_graph.add_edge(fnode_name, tnode_name)
 
-                # Make nodes for inputs
-                for ds_refs in quantum.predictedInputs.values():
-                    for ds_ref in ds_refs:
-                        ds_name = f"{ds_ref.datasetType.name}+{ds_ref.dataId}"
-                        if ds_name not in dsname_to_node_id:
-                            ncnt += 1
-                            dcnt += 1
-                            dsname_to_node_id[ds_name] = ncnt
-                        fnode_name = "%06d" % dsname_to_node_id[ds_name]
-                        fnode_desk = pretty_dataset_label(ds_name)
-                        self.sci_graph.add_node(
-                            fnode_name, node_type=FILENODE,
-                            label=fnode_desk, shape="box", style="rounded"
-                        )
-                        self.sci_graph.add_edge(fnode_name, tnode_name)
-                # Make nodes for outputs
-                for ds_refs in quantum.outputs.values():
-                    for ds_ref in ds_refs:
-                        ds_name = f"{ds_ref.datasetType.name}+{ds_ref.dataId}"
-                        if ds_name not in dsname_to_node_id:
-                            ncnt += 1
-                            dcnt += 1
-                            dsname_to_node_id[ds_name] = ncnt
-                        fnode_name = "%06d" % dsname_to_node_id[ds_name]
-                        fnode_desk = pretty_dataset_label(ds_name)
-                        self.sci_graph.add_node(
-                            fnode_name, node_type=FILENODE,
-                            label=fnode_desk, shape="box", style="rounded"
-                        )
-                        self.sci_graph.add_edge(tnode_name, fnode_name)
+            # Make dataset ref nodes for outputs
+            for ds_ref in itertools.chain.from_iterable(outputs.values()):
+                ds_name = f"{ds_ref.datasetType.name}+{ds_ref.dataId}"
+                if ds_name not in dsname_to_node_id:
+                    ncnt += 1
+                    dcnt += 1
+                    fnode_name = f"ds{dcnt:06d}"
+                    dsname_to_node_id[ds_name] = fnode_name
+                    fnode_label = pretty_dataset_label(ds_name)
+                    self.sci_graph.add_node(
+                        fnode_name, node_type=FILENODE,
+                        label=fnode_label, shape="box", style="rounded"
+                    )
+                fnode_name = dsname_to_node_id[ds_name]
+                self.sci_graph.add_edge(tnode_name, fnode_name)
         self.pipeline = pipeline
 
 
-def write_qgnode(qgnode, outfile):
+def write_subgraph(qgraph, qgnodes, outfile):
+    subgraph = qgraph.subset(qgnodes)
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
-    qgraph = QuantumGraph()
-    qgraph.append(qgnode)
     with open(outfile, 'wb') as fd:
-        pickle.dump(qgraph, fd)
+        subgraph.save(fd)
 
 
 class Task:
-    def __init__(self, taskname):
+    def __init__(self, taskname, task_graph):
         self.taskname = taskname
         self.dependencies = set()
         self.prereqs = dict()
         self.done = False
-        self.task_graph = None
+        self.task_graph = task_graph
+        self.qgnode = task_graph.pipeline.qgnodes[taskname]
 
     def add_dependency(self, dependency):
         self.dependencies.add(dependency)
@@ -142,14 +139,14 @@ class Task:
         self.prereqs[prereq] = False
 
     def run(self, dt=0.1):
-        qgnode = self.task_graph.pipeline.qgnodes[self.taskname]
+        qgnode = self.qgnode
         qgnode_dir = self.task_graph.config['qgnode_dir']
         if not all(self.prereqs.values()) or self.done:
             return
         print('running', self.taskname)
         task_id = self.taskname.split()[0]
         quantum_file = os.path.join(qgnode_dir, f'{task_id}.pickle')
-        write_qgnode(qgnode, quantum_file)
+        write_subgraph(self.task_graph.pipeline.qgraph, qgnode, quantum_file)
         configs = dict(self.task_graph.config)
         configs['quantum_file'] = quantum_file
         command = '''time pipetask run -b %(butlerConfig)s \\
@@ -181,12 +178,27 @@ class TaskGraph(dict):
     def __init__(self, config):
         super(TaskGraph, self).__init__()
         self.config = config
+        self.butler = Butler(config['butlerConfig'])
         self._tasks = None
         self.ingest_pipeline()
 
+    def ingest_pipeline(self):
+        self.pipeline = PipelineGraph(self.config['qgraph_file'])
+        graph = self.pipeline.sci_graph
+        for task_name in graph:
+            if not task_name.startswith('task'):
+                continue
+            for i, output in enumerate(graph.successors(task_name)):
+                for j, successor_task in enumerate(graph.successors(output)):
+                    self[task_name].add_dependency(self[successor_task])
+                    self[successor_task].add_prereq(self[task_name])
+        if self.config['outCollection'] in \
+           self.butler.registry.queryCollections():
+            self._set_state()
+
     def __getitem__(self, key):
         if not key in self:
-            super(TaskGraph, self).__setitem__(key, Task(key))
+            super(TaskGraph, self).__setitem__(key, Task(key, self))
             self[key].task_graph = self
         return super(TaskGraph, self).__getitem__(key)
 
@@ -196,16 +208,39 @@ class TaskGraph(dict):
         super(TaskGraph, self).__setitem__(key, value)
         self[key].task_graph = self
 
-    def done(self):
-        return all(_.done for _ in self.values())
+    def _set_state(self):
+        for task in self.tasks:
+            if self._have_quantum_outputs(task.qgnode.quantum):
+                task.finish()
 
+    @property
     def tasks(self):
         if self._tasks is None:
             self._tasks = [_ for _ in super(TaskGraph, self).values()]
             np.random.shuffle(self._tasks)
         return self._tasks
 
+    def _have_quantum_outputs(self, quantum):
+        collections = [self.config['outCollection']]
+        registry = self.butler.registry
+        for datasetRefs in quantum.outputs.values():
+            for datasetRef in datasetRefs:
+                ref = registry.findDataset(datasetRef.datasetType,
+                                           datasetRef.dataId,
+                                           collections=collections)
+                if ref is None:
+                    return False
+        return True
+
     def run_pipeline(self, dt=1):
+        if self.config['outCollection'] not in \
+           self.butler.registry.queryCollections():
+            self._init_out_collection()
+        while not self.done():
+            for task in self.tasks:
+                task.run(dt=dt)
+
+    def _init_out_collection(self):
         command = '''time pipetask run -b %(butlerConfig)s \\
             -i %(inCollection)s \\
             --output-run %(outCollection)s --init-only --skip-existing \\
@@ -218,11 +253,10 @@ class TaskGraph(dict):
         except subprocess.CalledProcessError as eobj:
             print("Error encountered initializing the pipeline:")
             print(eobj)
-
         print('\n')
-        while not self.done():
-            for task in self.tasks():
-                task.run(dt=dt)
+
+    def done(self):
+        return all(_.done for _ in self.values())
 
     def state(self):
         items = []
@@ -232,17 +266,6 @@ class TaskGraph(dict):
             items.append('   dependencies: ' + str(task.dependencies))
             items.append('')
         return '\n'.join(items)
-
-    def ingest_pipeline(self):
-        self.pipeline = PipelineGraph(self.config['qgraph_file'])
-        graph = self.pipeline.sci_graph
-        for task_name in graph:
-            if not task_name.startswith('task'):
-                continue
-            for output in graph.successors(task_name):
-                for successor_task in graph.successors(output):
-                    self[task_name].add_dependency(self[successor_task])
-                    self[successor_task].add_prereq(self[task_name])
 
 
 if __name__ == '__main__':
