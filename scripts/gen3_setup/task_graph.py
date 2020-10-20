@@ -5,6 +5,7 @@ import time
 import pickle
 import itertools
 import subprocess
+from collections import defaultdict
 import configparser
 import numpy as np
 import networkx
@@ -267,6 +268,14 @@ class TaskGraph(dict):
             items.append('')
         return '\n'.join(items)
 
+    def summary(self):
+        counts = defaultdict(list)
+        for task in self.tasks:
+            task_type = task.taskname.split()[1].strip('()')
+            counts[task_type].append(1 if task.done else 0)
+        for task_type, values in counts.items():
+            print(task_type, sum(values), len(values))
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -280,10 +289,9 @@ if __name__ == '__main__':
 
     my_tasks = TaskGraph(config)
 
-    print(my_tasks.state())
-    print()
+    my_tasks.summary()
 
     my_tasks.run_pipeline()
 
     print()
-    print(my_tasks.state())
+    my_tasks.summary()
