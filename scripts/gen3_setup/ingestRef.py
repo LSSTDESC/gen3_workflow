@@ -1,4 +1,4 @@
-from lsst.obs.lsst import LsstImSim
+from lsst.obs.lsst import LsstCamImSim
 from lsst.daf.butler import Butler, DatasetType, FileDataset
 from lsst.obs.base.gen2to3 import RootRepoConverter
 from lsst.obs.base.gen2to3 import ConvertRepoTask
@@ -6,10 +6,10 @@ from lsst.obs.base.gen2to3 import ConvertRepoTask
 import lsst.daf.persistence as dafPersist
 
 def makeTask(butler: Butler):
-    instrument = LsstImSim()
+    instrument = LsstCamImSim()
     config = ConvertRepoTask.ConfigClass()
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, config)
-    #config.instrument = "lsst.obs.lsst.LsstImSim"
+    #config.instrument = "lsst.obs.lsst.LsstCamImSim"
     config.refCats = ["cal_ref_cat"]
     config.relatedOnly = True
     config.transfer = "symlink"
@@ -20,7 +20,7 @@ root3 = 'gen3-repo'
 root2 = 'gen2-repo'
 butler = Butler(root3, run="refcats")
 task = makeTask(butler)
-instrument = LsstImSim()
+instrument = LsstCamImSim()
 rootRepoConverter = RootRepoConverter(task=task, root=root2,
                                       instrument=instrument)
 rootRepoConverter.prep()
