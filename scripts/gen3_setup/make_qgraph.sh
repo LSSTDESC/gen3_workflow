@@ -7,7 +7,7 @@ pipetask qgraph \
    -i "LSST-ImSim/raw/all,LSST-ImSim/calib,refcats,skymaps/imsim" \
    -b gen3-repo/butler.yaml \
    --skip-existing \
-   --instrument lsst.obs.lsst.LsstImSim \
+   --instrument lsst.obs.lsst.LsstCamImSim \
    --pipeline ${GEN3_WORKFLOW_DIR}/pipelines/${pipeline}.yaml \
    --save-qgraph ${pipeline}.pickle \
    --qgraph-dot ${pipeline}.dot
