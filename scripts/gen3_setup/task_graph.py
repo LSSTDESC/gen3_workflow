@@ -21,8 +21,8 @@ TASKNODE = 1
 class ScienceGraph(networkx.DiGraph):
     """
     Subclass of networkx.DiGraph that contains the DAG representation
-    of a QuantumGraph and keeps a dictionary of the indiviual nodes of
-    the QuantumGraph for execution using the `pipetask` command.
+    of a QuantumGraph and keeps a dictionary of the individual quantum
+    nodes for execution using the `pipetask` command.
     """
     def __init__(self, qgraph_file):
         """
