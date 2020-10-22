@@ -32,7 +32,7 @@ def makeRefCatConvertTask(butler: Butler):
 if __name__ == '__main__':
     instrument = LsstCamImSim()
     root2 = 'gen2-repo'
-    root3 = 'gen3-repo-test'
+    root3 = 'gen3-repo'
 
     # Convert raw files and CALIBs
     fresh_start = True
