@@ -56,7 +56,8 @@ class ScienceGraph(networkx.DiGraph):
         task_list = []
         for task_id, node in enumerate(self.qgraph):
             task_def = node.taskDef
-            task_list.append(task_def.taskName)
+            if task_def.taskName not in task_list:
+                task_list.append(task_def.taskName)
             ncnt += 1
             tnode_name = "task%d (%s)" % (ncnt, task_def.taskName)
             self.add_node(tnode_name, node_type=TASKNODE,
