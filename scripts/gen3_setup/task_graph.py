@@ -14,6 +14,26 @@ import networkx
 from lsst.daf.butler import DimensionUniverse, Butler
 from lsst.pipe.base import QuantumGraph
 
+import parsl
+from parsl import bash_app
+try:
+    parsl.load()
+except RuntimeError:
+    pass
+
+
+@bash_app
+def run_quantum(task, inputs=()):
+    configs = dict(task.task_graph.config)
+    configs['quantum_file'] = task.write_subgraph()
+    command = '''time pipetask run -b %(butlerConfig)s \\
+        -i %(inCollection)s \\
+        --output-run %(outCollection)s --extend-run --skip-init-writes \\
+        --qgraph %(quantum_file)s --skip-existing \\
+        --no-versions''' % configs
+    return command
+
+
 FILENODE = 0
 TASKNODE = 1
 
@@ -111,6 +131,7 @@ class Task:
         self.done = False
         self.task_graph = task_graph
         self.qgnode = task_graph.sci_graph.qgnodes[taskname]
+        self._future = None
 
     def add_dependency(self, dependency):
         """Add a Task dependent on the current one."""
@@ -127,16 +148,11 @@ class Task:
         """
         Run the quantum node in this Task using `pipetask`.
         """
-        qgnode = self.qgnode
-        qgnode_dir = self.task_graph.config['qgnode_dir']
         if not all(self.prereqs.values()) or self.done:
             return
         print(f'running "{self.taskname}":')
-        task_id = self.taskname.split()[0]
-        quantum_file = os.path.join(qgnode_dir, f'{task_id}.pickle')
-        self.write_subgraph(qgnode, quantum_file)
         configs = dict(self.task_graph.config)
-        configs['quantum_file'] = quantum_file
+        configs['quantum_file'] = self.write_subgraph()
         command = '''time pipetask run -b %(butlerConfig)s \\
         -i %(inCollection)s \\
         --output-run %(outCollection)s --extend-run --skip-init-writes \\
@@ -148,17 +164,20 @@ class Task:
         print('\n')
         self.finish()
 
-    def write_subgraph(self, qgnode, outfile):
+    def write_subgraph(self):
         """
         Write a subgraph containing the quantum node to a pickle file
         so that that file can be provided as an argument to `pipetask`
         for execution.
         """
-        qgraph = self.task_graph.sci_graph.qgraph
-        subgraph = qgraph.subset(qgnode)
-        os.makedirs(os.path.dirname(outfile), exist_ok=True)
-        with open(outfile, 'wb') as fd:
+        qgnode_dir = self.task_graph.config['qgnode_dir']
+        task_id = self.taskname.split()[0]
+        quantum_file = os.path.join(qgnode_dir, f'{task_id}.pickle')
+        subgraph = self.task_graph.sci_graph.qgraph.subset(self.qgnode)
+        os.makedirs(os.path.dirname(quantum_file), exist_ok=True)
+        with open(quantum_file, 'wb') as fd:
             subgraph.save(fd)
+        return quantum_file
 
     def finish(self):
         """
@@ -177,6 +196,13 @@ class Task:
 
     def __repr__(self):
         return f'Task("{self.taskname}")'
+
+    @property
+    def future(self):
+        if self._future is None:
+            inputs = [_.future for _ in self.prereqs]
+            self._future = run_quantum(self, inputs=inputs)
+        return self._future
 
 
 class TaskGraph(dict):
@@ -219,7 +245,6 @@ class TaskGraph(dict):
     def __getitem__(self, key):
         if not key in self:
             super().__setitem__(key, Task(key, self))
-            self[key].task_graph = self
         return super().__getitem__(key)
 
     def __setitem__(self, key, value):
@@ -242,7 +267,7 @@ class TaskGraph(dict):
         """
         if self._tasks is None:
             self._tasks = list(super().values())
-            np.random.shuffle(self._tasks)
+            #np.random.shuffle(self._tasks)
         return self._tasks
 
     def _have_outputs(self, quantum):
@@ -273,11 +298,12 @@ class TaskGraph(dict):
                 task.run()
 
     def _init_out_collection(self):
+        config = self.config
         command = '''time pipetask run -b %(butlerConfig)s \\
         -i %(inCollection)s \\
         --output-run %(outCollection)s --init-only --skip-existing \\
         --register-dataset-types --qgraph %(qgraph_file)s \\
-        --no-versions''' % self.config
+        --no-versions''' % config
         print(f"\nInitializing output collection {config['outCollection']}\n"
               f"for {config['qgraph_file']}:\n")
         print(command)
