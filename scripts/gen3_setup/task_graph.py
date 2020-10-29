@@ -11,18 +11,12 @@ from collections import defaultdict
 import configparser
 import networkx
 import parsl
-from parsl import bash_app
 from lsst.daf.butler import DimensionUniverse, Butler
 from lsst.pipe.base import QuantumGraph
 
-try:
-    parsl.load()
-except RuntimeError:
-    pass
 
-
-@bash_app
-def run_quantum(task, inputs=()):
+@parsl.bash_app
+def run_quantum(task, inputs=(), stdout=None, stderr=None):
     """
     Run the quantum associated with the specified task.
     If the task's outputs are present in the repo, it's done so
@@ -159,13 +153,11 @@ class Task:
         """
         Run the quantum node in this Task using `pipetask`.
         """
-        if not all(self.prereqs.values()) or self.done:
+        if self.done:
             return
-        print(f'running "{self.taskname}":')
         command = self.command_line()
         print(command)
-        sys.stdout.flush()
-        subprocess.check_call(command, shell=True)
+        self.get_future().result()
         print('\n')
         self.finish()
 
@@ -209,6 +201,15 @@ class Task:
             self.finish()
         return self._done
 
+    def log_files(self):
+        """
+        Return a dict of filenames for directing stderr and stdout.
+        """
+        prefix = self.taskname.split()[0]
+        log_dir = self.task_graph.logging_dir
+        return dict(stderr=os.path.join(log_dir, f'{prefix}.stderr'),
+                    stdout=os.path.join(log_dir, f'{prefix}.stdout'))
+
     def get_future(self):
         """
         Return the future of the run_quantum bash_app that is
@@ -217,7 +218,7 @@ class Task:
         """
         if self.future is None:
             inputs = [_.get_future() for _ in self.prereqs]
-            self.future = run_quantum(self, inputs=inputs)
+            self.future = run_quantum(self, inputs=inputs, **self.log_files())
         return self.future
 
 
@@ -238,6 +239,8 @@ class TaskGraph(dict):
         self.butler = Butler(config['butlerConfig'])
         self._tasks = None
         self.ingest_pipeline()
+        self.logging_dir = os.path.abspath(config['logging_dir'])
+        os.makedirs(self.logging_dir, exist_ok=True)
 
     def ingest_pipeline(self):
         """
@@ -278,9 +281,7 @@ class TaskGraph(dict):
     @property
     def tasks(self):
         """
-        A list of the Task objects contained in this TaskGraph.  This list
-        is randomized initially to mimic asynchronous execution of the
-        pipeline components.
+        A list of the Task objects contained in this TaskGraph.
         """
         if self._tasks is None:
             self._tasks = list(super().values())
@@ -307,8 +308,25 @@ class TaskGraph(dict):
                     return False
         return True
 
+    def get_tasks_by_name(self, taskname, remaining=True):
+        """
+        Return all tasks by partial name, returning the ones not
+        done by default.
+        """
+        my_tasks = []
+        for task in self.tasks:
+            if taskname in task.taskname and (not remaining or not task.done):
+                my_tasks.append(task)
+        return my_tasks
+
     def run_pipeline(self):
-        """Run the pipeline tasks sequentially until they are all done."""
+        """
+        Run the pipeline tasks sequentially until they are all done.  This
+        function will not in general take advantage of possible
+        concurrency in running the tasks. Greater concurrency can be
+        achieved by calling .get_future() for the most downstream tasks
+        and letting parsl execute the futures of prerequisite tasks.
+        """
         while not self.done():
             for task in self.tasks:
                 task.run()
