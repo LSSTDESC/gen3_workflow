@@ -1,14 +1,11 @@
 tract=3828
 patch=24
-#pipeline=ProcessCcd
-#pipeline=Coaddition
 pipeline=DRP
 
 pipetask qgraph \
-   -d "tract=3828 AND patch=24" \
+   -d "tract=${tract} AND patch=${patch}" \
    -i "LSSTCam-imSim/raw/all,LSSTCam-imSim/calib,ref_cat,skymaps/imsim" \
-   -b gen3-repo/butler.yaml \
-   --skip-existing \
+   -b gen3-repo \
    --instrument lsst.obs.lsst.LsstCamImSim \
    --pipeline ${GEN3_WORKFLOW_DIR}/pipelines/${pipeline}.yaml \
    --save-qgraph ${pipeline}_${tract}_${patch}.pickle \
