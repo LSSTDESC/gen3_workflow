@@ -8,7 +8,7 @@ def makeRawCalibConvertTask(butler: Butler, fresh_start: bool=True):
     config = ConvertRepoTask.ConfigClass()
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, config)
     config.relatedOnly = True
-    config.transfer = "auto"
+    config.transfer = "symlink"
     config.datasetIncludePatterns = ["flat", "bias", "dark", "fringe", "SKY",
                                      "raw"]
     config.datasetIgnorePatterns.append("*_camera")
