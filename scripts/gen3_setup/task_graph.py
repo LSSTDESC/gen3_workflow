@@ -9,13 +9,12 @@ import itertools
 import subprocess
 from collections import defaultdict
 import configparser
-import numpy as np
 import networkx
+import parsl
+from parsl import bash_app
 from lsst.daf.butler import DimensionUniverse, Butler
 from lsst.pipe.base import QuantumGraph
 
-import parsl
-from parsl import bash_app
 try:
     parsl.load()
 except RuntimeError:
@@ -24,18 +23,14 @@ except RuntimeError:
 
 @bash_app
 def run_quantum(task, inputs=()):
-    configs = dict(task.task_graph.config)
-    configs['quantum_file'] = task.write_subgraph()
-    command = '''time pipetask run -b %(butlerConfig)s \\
-        -i %(inCollection)s \\
-        --output-run %(outCollection)s --extend-run --skip-init-writes \\
-        --qgraph %(quantum_file)s --skip-existing \\
-        --no-versions''' % configs
-    return command
-
-
-FILENODE = 0
-TASKNODE = 1
+    """
+    Run the quantum associated with the specified task.
+    If the task's outputs are present in the repo, it's done so
+    return an empty string as a no-op command line.
+    """
+    if task.done:
+        return ''
+    return task.command_line()
 
 
 class ScienceGraph(networkx.DiGraph):
@@ -44,6 +39,8 @@ class ScienceGraph(networkx.DiGraph):
     of a QuantumGraph and keeps a dictionary of the individual quantum
     nodes for execution using the `pipetask` command.
     """
+    FILENODE = 0
+    TASKNODE = 1
     def __init__(self, qgraph_file):
         """
         Parameters
@@ -55,8 +52,8 @@ class ScienceGraph(networkx.DiGraph):
         super().__init__()
         self.qgnodes = None
         self.task_list = None
-        with open(qgraph_file, 'rb') as fd:
-            self.qgraph = QuantumGraph.load(fd, DimensionUniverse())
+        with open(qgraph_file, 'rb') as input_:
+            self.qgraph = QuantumGraph.load(input_, DimensionUniverse())
         self._read_quantum_graph()
 
     def _read_quantum_graph(self):
@@ -80,7 +77,7 @@ class ScienceGraph(networkx.DiGraph):
                 task_list.append(task_def.taskName)
             ncnt += 1
             tnode_name = "task%d (%s)" % (ncnt, task_def.taskName)
-            self.add_node(tnode_name, node_type=TASKNODE,
+            self.add_node(tnode_name, node_type=self.TASKNODE,
                           task_def_id=task_id, task_abbrev=task_def.label)
             self.qgnodes[tnode_name] = node
             inputs, outputs = node.quantum.inputs, node.quantum.outputs
@@ -92,7 +89,7 @@ class ScienceGraph(networkx.DiGraph):
                     dcnt += 1
                     fnode_name = f"ds{dcnt:06d}"
                     dsname_to_node_id[ds_name] = fnode_name
-                    self.add_node(fnode_name, node_type=FILENODE)
+                    self.add_node(fnode_name, node_type=self.FILENODE)
                 fnode_name = dsname_to_node_id[ds_name]
                 self.add_edge(fnode_name, tnode_name)
 
@@ -104,7 +101,7 @@ class ScienceGraph(networkx.DiGraph):
                     dcnt += 1
                     fnode_name = f"ds{dcnt:06d}"
                     dsname_to_node_id[ds_name] = fnode_name
-                    self.add_node(fnode_name, node_type=FILENODE)
+                    self.add_node(fnode_name, node_type=self.FILENODE)
                 fnode_name = dsname_to_node_id[ds_name]
                 self.add_edge(tnode_name, fnode_name)
         self.task_list = task_list
@@ -128,10 +125,10 @@ class Task:
         self.taskname = taskname
         self.dependencies = set()
         self.prereqs = dict()
-        self.done = False
         self.task_graph = task_graph
         self.qgnode = task_graph.sci_graph.qgnodes[taskname]
-        self._future = None
+        self._done = False
+        self.future = None
 
     def add_dependency(self, dependency):
         """Add a Task dependent on the current one."""
@@ -144,6 +141,20 @@ class Task:
         """
         self.prereqs[prereq] = False
 
+    def command_line(self):
+        """
+        Write the QuantumGraph node associated with this task as a
+        subgraph to a pickle file and generate the `pipetask run` command
+        line to execute the subgraph.
+        """
+        config = dict(self.task_graph.config)
+        config['quantum_file'] = self.write_subgraph()
+        return '''time pipetask run -b %(butlerConfig)s \\
+        -i %(inCollection)s \\
+        --output-run %(outCollection)s --extend-run --skip-init-writes \\
+        --qgraph %(quantum_file)s --skip-existing \\
+        --no-versions''' % config
+
     def run(self):
         """
         Run the quantum node in this Task using `pipetask`.
@@ -151,13 +162,7 @@ class Task:
         if not all(self.prereqs.values()) or self.done:
             return
         print(f'running "{self.taskname}":')
-        configs = dict(self.task_graph.config)
-        configs['quantum_file'] = self.write_subgraph()
-        command = '''time pipetask run -b %(butlerConfig)s \\
-        -i %(inCollection)s \\
-        --output-run %(outCollection)s --extend-run --skip-init-writes \\
-        --qgraph %(quantum_file)s --skip-existing \\
-        --no-versions''' % configs
+        command = self.command_line()
         print(command)
         sys.stdout.flush()
         subprocess.check_call(command, shell=True)
@@ -175,8 +180,8 @@ class Task:
         quantum_file = os.path.join(qgnode_dir, f'{task_id}.pickle')
         subgraph = self.task_graph.sci_graph.qgraph.subset(self.qgnode)
         os.makedirs(os.path.dirname(quantum_file), exist_ok=True)
-        with open(quantum_file, 'wb') as fd:
-            subgraph.save(fd)
+        with open(quantum_file, 'wb') as output:
+            subgraph.save(output)
         return quantum_file
 
     def finish(self):
@@ -185,7 +190,7 @@ class Task:
         and updating its dependent task that its outputs have been
         generated.
         """
-        self.done = True
+        self._done = True
         for dependency in self.dependencies:
             if self not in dependency.prereqs:
                 raise RuntimeError('inconsistent dependency')
@@ -198,11 +203,22 @@ class Task:
         return f'Task("{self.taskname}")'
 
     @property
-    def future(self):
-        if self._future is None:
-            inputs = [_.future for _ in self.prereqs]
-            self._future = run_quantum(self, inputs=inputs)
-        return self._future
+    def done(self):
+        """Return True if this task has been executed."""
+        if self.future is not None and self.future.done():
+            self.finish()
+        return self._done
+
+    def get_future(self):
+        """
+        Return the future of the run_quantum bash_app that is
+        used to execute this task, collecting input futures from
+        this task's prerequisite tasks.
+        """
+        if self.future is None:
+            inputs = [_.get_future() for _ in self.prereqs]
+            self.future = run_quantum(self, inputs=inputs)
+        return self.future
 
 
 class TaskGraph(dict):
@@ -255,7 +271,8 @@ class TaskGraph(dict):
 
     def _set_state(self):
         for task in self.tasks:
-            if self._have_outputs(task.qgnode.quantum):
+            if ((task.future is not None and task.future.done)
+                or self._have_outputs(task.qgnode.quantum)):
                 task.finish()
 
     @property
@@ -267,7 +284,6 @@ class TaskGraph(dict):
         """
         if self._tasks is None:
             self._tasks = list(super().values())
-            #np.random.shuffle(self._tasks)
         return self._tasks
 
     def _have_outputs(self, quantum):
@@ -282,10 +298,10 @@ class TaskGraph(dict):
         butler = Butler(self.config['butlerConfig'],
                         run=self.config['outCollection'])
         registry = butler.registry
-        for datasetRefs in quantum.outputs.values():
-            for datasetRef in datasetRefs:
-                ref = registry.findDataset(datasetRef.datasetType,
-                                           datasetRef.dataId,
+        for dataset_refs in quantum.outputs.values():
+            for dataset_ref in dataset_refs:
+                ref = registry.findDataset(dataset_ref.datasetType,
+                                           dataset_ref.dataId,
                                            collections=butler.run)
                 if ref is None:
                     return False
@@ -359,12 +375,12 @@ if __name__ == '__main__':
     cp = configparser.ConfigParser()
     cp.optionxform = str
     cp.read(args.config_file)
-    config = dict(cp.items('DEFAULT'))
+    configs = dict(cp.items('DEFAULT'))
 
-    task_graph = TaskGraph(config)
+    my_task_graph = TaskGraph(configs)
 
     if args.summary:
-        task_graph.summary()
+        my_task_graph.summary()
 
     if args.run:
-        task_graph.run_pipeline()
+        my_task_graph.run_pipeline()
