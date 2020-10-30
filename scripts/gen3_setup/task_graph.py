@@ -196,7 +196,8 @@ class Task:
     @property
     def done(self):
         """Return True if this task has been executed."""
-        if self.future is not None and self.future.done():
+        if (self.future is not None and self.future.done()
+            and self.future.exception() is None):
             self.finish()
         return self._done
 
@@ -316,6 +317,13 @@ class TaskGraph(dict):
             if taskname in task.taskname and (not remaining or not task.done):
                 my_tasks.append(task)
         return my_tasks
+
+    def reset_exceptions(self):
+        """Reset all tasks that finished with an exception."""
+        for task in self.tasks:
+            if task.future is not None and task.future.exception() is not None:
+                task.future = None
+                task._done = False
 
     def run_pipeline(self):
         """
