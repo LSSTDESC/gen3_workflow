@@ -70,7 +70,7 @@ class ScienceGraph(networkx.DiGraph):
             if task_def.taskName not in task_list:
                 task_list.append(task_def.taskName)
             ncnt += 1
-            tnode_name = "task%d (%s)" % (ncnt, task_def.taskName)
+            tnode_name = f"task_{ncnt:06d}_{task_def.taskName}"
             self.add_node(tnode_name, node_type=self.TASKNODE,
                           task_def_id=task_id, task_abbrev=task_def.label)
             self.qgnodes[tnode_name] = node
@@ -168,8 +168,7 @@ class Task:
         for execution.
         """
         qgnode_dir = self.task_graph.config['qgnode_dir']
-        task_id = self.taskname.split()[0]
-        quantum_file = os.path.join(qgnode_dir, f'{task_id}.pickle')
+        quantum_file = os.path.join(qgnode_dir, f'{self.taskname}.pickle')
         subgraph = self.task_graph.sci_graph.qgraph.subset(self.qgnode)
         os.makedirs(os.path.dirname(quantum_file), exist_ok=True)
         with open(quantum_file, 'wb') as output:
@@ -205,10 +204,9 @@ class Task:
         """
         Return a dict of filenames for directing stderr and stdout.
         """
-        prefix = self.taskname.split()[0]
         log_dir = self.task_graph.logging_dir
-        return dict(stderr=os.path.join(log_dir, f'{prefix}.stderr'),
-                    stdout=os.path.join(log_dir, f'{prefix}.stdout'))
+        return dict(stderr=os.path.join(log_dir, f'{self.taskname}.stderr'),
+                    stdout=os.path.join(log_dir, f'{self.taskname}.stdout'))
 
     def get_future(self):
         """
@@ -369,7 +367,7 @@ class TaskGraph(dict):
         """
         counts = defaultdict(list)
         for task in self.tasks:
-            task_type = task.taskname.split()[1].strip('()')
+            task_type = task.taskname.split('_')[-1]
             counts[task_type].append(1 if task.done else 0)
         for task_type in self.sci_graph.task_list:
             values = counts[task_type]
