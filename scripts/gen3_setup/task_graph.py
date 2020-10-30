@@ -206,8 +206,9 @@ class Task:
         Return a dict of filenames for directing stderr and stdout.
         """
         log_dir = self.task_graph.logging_dir
-        return dict(stderr=os.path.join(log_dir, f'{self.taskname}.stderr'),
-                    stdout=os.path.join(log_dir, f'{self.taskname}.stdout'))
+#        return dict(stderr=os.path.join(log_dir, f'{self.taskname}.stderr'),
+#                    stdout=os.path.join(log_dir, f'{self.taskname}.stdout'))
+        return dict(stderr=os.path.join(log_dir, f'{self.taskname}.stderr'))
 
     def get_future(self):
         """
