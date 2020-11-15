@@ -121,6 +121,12 @@ class ParslService(BaseWmsService):
         """
         Convert a generic workflow to a Parsl pipeline.
         """
+        # Import the Parsl runtime config.
+        try:
+            lsst.utils.doImport(self.config['parslConfig'])
+        except RuntimeError:
+            pass
+
         workflow = ParslWorkflow.from_generic_workflow(config, generic_workflow,
                                                        out_prefix)
         # Run pipetaskInit
