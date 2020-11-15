@@ -74,10 +74,6 @@ class ParslJob:
         """
         self.prereqs.add(prereq)
 
-    def finish(self):
-        """Set the job as done."""
-        self._done = True
-
     @property
     def done(self):
         """
@@ -88,7 +84,7 @@ class ParslJob:
             return (job.future is not None and job.future.done()
                     and job.future.exception() is None)
         if not self._done and (future_settled(self) or self.have_outputs()):
-            self.finish()
+            self._done = True
         return self._done
 
     def log_files(self):
