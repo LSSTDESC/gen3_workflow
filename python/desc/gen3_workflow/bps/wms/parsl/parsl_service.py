@@ -4,26 +4,22 @@ Parsl-based workflow management service plug-in for ctrl_bps.
 import os
 import subprocess
 import parsl
-from parsl.executors.threads import ThreadPoolExecutor
+import lsst.utils
 from lsst.daf.butler import Butler
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
-try:
-    config = parsl.config.Config(executors=[ThreadPoolExecutor(max_threads=4)])
-    dfk = parsl.load(config)
-except RuntimeError:
-    pass
 
 
 @parsl.bash_app
 def run_job(job, inputs=(), stdout=None, stderr=None):
     """
-    Run the quantum graph associated with the specified job.  If the
-    job is already done, return an empty string as a no-op command
-    line.
+    Run the quantum graph associated with the specified job.
     """
-    if job.done:
-        return ''
     return job.command_line()
+
+
+@parsl.python_app
+def no_op_job():
+    return 0
 
 
 class ParslJob:
@@ -74,6 +70,8 @@ class ParslJob:
         return dict(stderr=os.path.join(log_dir, f'{self.gwf_job.name}.stderr'))
 
     def get_future(self):
+        if self.done:
+            self.future = no_op_job()
         if self.future is None:
             inputs = [_.get_future() for _ in self.prereqs]
             self.future = run_job(self, inputs=inputs, **self.log_files())
