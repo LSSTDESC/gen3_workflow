@@ -143,7 +143,7 @@ class ParslGraph(dict):
         super().__init__()
         self.gwf = generic_workflow
         self.config = config
-        self.butler = Butler(config['butlerConfig'])
+        self._pipetaskInit()
         self._ingest()
 
     def _ingest(self):
@@ -164,6 +164,15 @@ class ParslGraph(dict):
             gwf_job = self.gwf.get_job(job_name)
             super().__setitem__(job_name, ParslJob(gwf_job, self.config))
         return super().__getitem__(job_name)
+
+    def _pipetaskInit(self):
+        """If the output collection isn't in the repo, run pipetaskInit."""
+        butler = Butler(self.config['butlerConfig'])
+        if self.config['outCollection'] not in \
+           butler.registry.queryCollections():
+            pipetaskInit = self.gwf.get_job('pipetaskInit')
+            command = 'time ' + pipetaskInit.cmdline
+            subprocess.check_call(command, shell=True)
 
     def run(self):
         """
@@ -206,12 +215,6 @@ class ParslService(BaseWmsService):
         workflow = ParslWorkflow.\
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
-        # Run pipetaskInit
-        if workflow.parsl_graph.config['outCollection'] not in \
-           workflow.parsl_graph.butler.registry.queryCollections():
-            pipetaskInit = workflow.parsl_graph.gwf.get_job('pipetaskInit')
-            command = 'time ' + pipetaskInit.cmdline
-            subprocess.check_call(command, shell=True)
 
         return workflow
 
