@@ -29,9 +29,9 @@ def run_job(job, inputs=(), stdout=None, stderr=None):
 class ParslJob:
     """
     Wrapper class for a GenericWorkflowJob.  This class keeps track of
-    prerequisite and dependent jobs, and passes the required input jobs
-    as futures to the parsl.bash_app that executes the underlying quantum
-    graph.
+    prerequisite and dependent jobs, and passes the required input
+    jobs as futures to the parsl.bash_app that executes the underlying
+    quantum graph.
     """
     def __init__(self, gwf_job, config):
         self.gwf_job = gwf_job
@@ -59,8 +59,10 @@ class ParslJob:
 
     @property
     def done(self):
-        if (self.future is not None and self.future.done()
-            and self.future.exception() is None):
+        def future_settled(job):
+            return (job.future is not None and job.future.done()
+                    and job.future.exception() is None)
+        if not self._done and (future_settled(self) or self.have_outputs()):
             self.finish()
         return self._done
 
@@ -99,7 +101,6 @@ class ParslGraph(dict):
         self.config = config
         self.butler = Butler(config['butlerConfig'])
         self._ingest()
-        self._set_state()
 
     def _ingest(self):
         for job_name in self.gwf:
@@ -108,14 +109,6 @@ class ParslGraph(dict):
             for successor_job in self.gwf.successors(job_name):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
-
-    def _set_state(self):
-        for job in self.values():
-            if job.gwf_job.name == 'pipetaskInit':
-                continue
-            if ((job.future is not None and job.future.done)
-                or job.have_outputs()):
-                job.finish()
 
     def __getitem__(self, job_name):
         if job_name == 'pipetaskInit':
@@ -134,7 +127,7 @@ class ParslService(BaseWmsService):
         """
         workflow = ParslWorkflow.from_generic_workflow(config, generic_workflow,
                                                        out_prefix)
-        # Run pipetask run --init-only --extend-run
+        # Run pipetaskInit
         if workflow.parsl_graph.config['outCollection'] not in \
            workflow.parsl_graph.butler.registry.queryCollections():
             pipetaskInit = workflow.parsl_graph.gwf.get_job('pipetaskInit')
@@ -147,19 +140,13 @@ class ParslService(BaseWmsService):
         """
         Submit a workflow for execution.
         """
-        # Get the qgraph jobs, sorting by the prepended job number.
-        job_names = sorted(set(workflow.parsl_graph.keys())\
-                           .difference({'pipetaskInit'}),
-                           key=lambda x: int(x.split('_')[0]))
-
         # Request the futures of the qgraph jobs in the workflow graph
-        # that have no dependencies.  These are the jobs at the tail
-        # end of the DAG.  Since the prerequisite futures are set
+        # that have no dependencies.  These are the last jobs of the
+        # DAG to be executed.  Since the prerequisite futures are set
         # recursively, Parsl will use those futures to schedule all of
         # the jobs in the DAG in a consistent order.
-        futures = [job.get_future() for job in workflow.parsl_graph.values()
-                   if not job.dependencies]
-        _ = [future.result() for future in futures]
+        _ = [job.get_future().result() for job in workflow.parsl_graph.values()
+             if not job.dependencies]
 
 
 class ParslWorkflow(BaseWmsWorkflow):
