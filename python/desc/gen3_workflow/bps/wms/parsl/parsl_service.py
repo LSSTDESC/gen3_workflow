@@ -111,8 +111,6 @@ class ParslGraph(dict):
                 self[successor_job].add_prereq(self[job_name])
 
     def __getitem__(self, job_name):
-        if job_name == 'pipetaskInit':
-            raise RuntimeError('trying to ingest pipetaskInit')
         if not job_name in self:
             gwf_job = self.gwf.get_job(job_name)
             super().__setitem__(job_name, ParslJob(gwf_job, self.config))
