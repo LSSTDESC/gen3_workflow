@@ -1,10 +1,16 @@
 description: Multiband
 tasks:
   detection: lsst.pipe.tasks.multiBand.DetectCoaddSourcesTask
-  mergeDetections: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
+  mergeDetections:
+    class: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
   deblend: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesSingleTask
   measure:
     class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
     config:
       file: $GEN3_WORKFLOW_DIR/config/measurement_filterMap.py
-  mergeMeasurements: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+  mergeMeasurements:
+    class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
