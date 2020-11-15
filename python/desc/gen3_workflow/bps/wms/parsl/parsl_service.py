@@ -33,7 +33,7 @@ class ParslJob:
         self.gwf_job = gwf_job
         self.config = config
         self.dependencies = set()
-        self.prereqs = dict()
+        self.prereqs = set()
         self._done = False
         self.future = None
 
@@ -44,14 +44,10 @@ class ParslJob:
         self.dependencies.add(dependency)
 
     def add_prereq(self, prereq):
-        self.prereqs[prereq] = False
+        self.prereqs.add(prereq)
 
     def finish(self):
         self._done = True
-        for dependency in self.dependencies:
-            if self not in dependency.prereqs:
-                raise RuntimeError('inconsistent dependency')
-            dependency.prereqs[self] = True
 
     @property
     def done(self):
