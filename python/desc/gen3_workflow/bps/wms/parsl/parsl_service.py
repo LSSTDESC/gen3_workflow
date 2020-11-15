@@ -165,6 +165,17 @@ class ParslGraph(dict):
             super().__setitem__(job_name, ParslJob(gwf_job, self.config))
         return super().__getitem__(job_name)
 
+    def run(self):
+        """
+        Run the encapsulated workflow by requesting the futures
+        of the jobs at the endpoints of the DAG.
+        """
+        futures = [job.get_future() for job in self.values()
+                   if not job.dependencies]
+        # Calling .result() for each future blocks returning from this
+        # method until all the jobs have executed.
+        _ = [future.result() for future in futures]
+
 
 class ParslService(BaseWmsService):
     """Parsl-based implementation for the WMS interface."""
@@ -213,13 +224,7 @@ class ParslService(BaseWmsService):
         workflow: `desc.gen3_workflow.bps.wms.parsl_service.ParslWorkflow`
             Workflow object to execute.
         """
-        # Request the futures of the qgraph jobs in the workflow graph
-        # that have no dependencies.  These are the last jobs of the
-        # DAG to be executed.  Since the prerequisite futures are set
-        # recursively, Parsl will use those futures to schedule all of
-        # the jobs in the DAG in a consistent order.
-        _ = [job.get_future().result() for job in workflow.parsl_graph.values()
-             if not job.dependencies]
+        workflow.parsl_graph.run()
 
 
 class ParslWorkflow(BaseWmsWorkflow):
