@@ -174,16 +174,19 @@ class ParslGraph(dict):
             command = 'time ' + pipetaskInit.cmdline
             subprocess.check_call(command, shell=True)
 
-    def run(self):
+    def run(self, block=True):
         """
         Run the encapsulated workflow by requesting the futures
         of the jobs at the endpoints of the DAG.
         """
         futures = [job.get_future() for job in self.values()
                    if not job.dependencies]
-        # Calling .result() for each future blocks returning from this
-        # method until all the jobs have executed.
-        _ = [future.result() for future in futures]
+        if block:
+            # Calling .result() for each future blocks returning from
+            # this method until all the jobs have executed.  This is
+            # needed for running in a non-interactive python process
+            # that would otherwise end before the futures resolve.
+            _ = [future.result() for future in futures]
 
 
 class ParslService(BaseWmsService):
