@@ -1,0 +1,31 @@
+operator: jchiang
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
+templateDataId: "{tract}_{patch}_{band}_{visit}_{detector}"
+project: dev
+campaign: quick
+submitPath: ${PWD}/submit/{outCollection}
+computeSite: ncsapool
+requestMemory: 2GB
+requestCpus: 1
+
+# Make sure these values correspond to ones in the bin/run_demo.sh's
+# pipetask command line.
+payload:
+  runInit: true
+  payloadName: DC2_dev_dataset
+  butlerConfig: ${PWD}/gen3-repo
+  inCollection: LSSTCam-imSim/raw/all,LSSTCam-imSim/calib,ref_cat,skymaps/imsim
+  outCollection: shared/parsl_test
+  dataQuery: tract=3828 AND patch=24 AND detector=177
+
+pipetask:
+  pipetaskInit:
+    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --skip-existing --register-dataset-types --qgraph {qgraphFile} --no-versions"
+  assembleCoadd:
+    requestMemory: 8GB
+
+parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config
+wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
+clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
+createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument lsst.obs.lsst.LsstCamImSim -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
+runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions"
