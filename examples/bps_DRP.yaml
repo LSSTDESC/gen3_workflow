@@ -15,8 +15,8 @@ payload:
   payloadName: DC2_dev_dataset
   butlerConfig: ${PWD}/gen3-repo
   inCollection: LSSTCam-imSim/raw/all,LSSTCam-imSim/calib,ref_cat,skymaps/imsim
-  outCollection: shared/parsl_test_{timestamp}
-  dataQuery: tract=3828 AND patch=24 AND detector=177
+  outCollection: shared/parsl_patch_test_{timestamp}
+  dataQuery: tract=3828 AND patch=24 AND skymap='DC2'
 
 pipetask:
   pipetaskInit:
@@ -27,6 +27,7 @@ pipetask:
 parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
+commandPrepend: time
 
 wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering

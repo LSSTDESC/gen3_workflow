@@ -52,7 +52,9 @@ class ParslJob:
 
     def command_line(self):
         """Return the job command line to run in bash."""
-        return 'time ' + self.gwf_job.cmdline
+        prefix = self.config.get('commandPrepend')
+        return ' '.join([prefix, self.gwf_job.cmdline]) if prefix \
+            else self.gwf_job.cmdline
 
     def add_dependency(self, dependency):
         """
