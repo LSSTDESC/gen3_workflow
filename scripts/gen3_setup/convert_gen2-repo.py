@@ -1,5 +1,7 @@
+import os
 from lsst.daf.butler import Butler, DatasetType, FileDataset
-from lsst.obs.base.gen2to3 import ConvertRepoTask, RootRepoConverter
+from lsst.obs.base.gen2to3 import ConvertRepoTask, RootRepoConverter, \
+    CalibRepo
 from lsst.obs.lsst import LsstCamImSim
 
 
@@ -14,7 +16,6 @@ def makeRawCalibConvertTask(butler: Butler, fresh_start: bool=True):
     config.datasetIgnorePatterns.append("*_camera")
     config.fileIgnorePatterns.extend(["*.log", "*.png", "rerun*"])
     config.doRegisterInstrument = fresh_start
-    config.doWriteCuratedCalibrations = fresh_start
     return ConvertRepoTask(config=config, butler3=butler, instrument=instrument)
 
 
@@ -38,9 +39,8 @@ if __name__ == '__main__':
     fresh_start = True
     butler = Butler(root3, run=instrument.makeDefaultRawIngestRunName())
     task = makeRawCalibConvertTask(butler, fresh_start=fresh_start)
-    task.run(root=root2, reruns=[],
-             calibs=({"CALIB": instrument.makeCollectionName("calib")}
-                     if fresh_start else None))
+    calib_path = os.path.join(root2, 'CALIB')
+    task.run(root=root2, reruns=[], calibs=[CalibRepo(path=calib_path)])
 
     # Convert ref_cats
     butler = Butler(root3, run='ref_cat')
