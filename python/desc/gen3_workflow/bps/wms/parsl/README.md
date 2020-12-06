@@ -7,10 +7,10 @@
 * A Gen3 repository
 
 ### Software Set Up
-* For using the batch queues at NERSC, a CVMFS installation of `lsst_distrib` is recommended.  An `lsstsqre` shifter image cannot be used since the runtime environment on the submission node uses Slurm commands such as `sbatch` to interact with the NERSC batch queues.
-* If one is just running locally on a single node, then a shifter image can be used.
-* Once the lsst_distrib environment is running, assuming the v1.0.0 version isn't available, Parsl can be installed with `pip install parsl --user` in one's `~/.local` folder.
-* Finally, the `gen3_workflow` package is needed.  To install and set up do
+* For using the batch queues at NERSC, a CVMFS installation of `lsst_distrib` is recommended.  An `lsstsqre` shifter image cannot be used since the runtime environment on the submission node uses Slurm commands such as `sbatch` to interact with the NERSC batch queues and those commands are not available in those images.
+* If one is running locally on a single node, then a shifter image can be used.
+* Assuming the v1.0.0 version or later isn't already available, Parsl can be installed with `pip install parsl --user` in one's `~/.local` folder.
+* Finally, this `gen3_workflow` package is needed.  To install and set it up do
 ```
 $ git clone https://github.com/LSSTDESC/gen3_workflow.git
 $ cd gen3_workflow
@@ -32,17 +32,17 @@ parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
 ```
-* `butlerConfig` should point to your Gen3 repo
-* `inCollection` is the list of input collections
+* `butlerConfig` should point to your Gen3 repo.
+* `inCollection` is the list of input collections.
 * `outCollection` is the name you give to your output collection.  The `{timestamp}` field ensures that unique collection names are assigned.
 * `dataQuery` is the data selection to be made.  The above example selects a single patch for processing using the `DC2` skymap.
-* `parslConfig` specifies which resources to use for running the pipetask jobs.  The two `threaded_pool_confg`s specify a maximum of 4 and 32 concurrent threads to be used; and the `ht_debug_config` is set up to submit to the debug queue using a Haswell node.
+* `parslConfig` specifies which resources to use for running the pipetask jobs.  The two `threaded_pool_confg`s specify a maximum of 4 and 32 concurrent threads to be used; and the `ht_debug_config` is configured to submit to the debug queue running on a Haswell node.
 
 ### Running the Pipeline
-Running the pipeline code consists of just entering
+Running the pipeline code consists of entering
 ```
 $ bps submit bps_DRP.yaml
 ```
-where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` (or another parsl config that uses a [`HighThroughputExecutor`](https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors)), then two subdirectories will be created:  `runinfo` which contains Parsl log ouput and `submit` which will contain the QuantumGraph files produced by ctrl_bps and output logs in a folder `submit/<outCollection>/logging`.
+where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` (or another parsl config that uses a [`HighThroughputExecutor`](https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors)), then a `runinfo` subdirectory will be created which contains Parsl log ouput.  The ctrl_bps code writes to a `submit` subdirectory which contains the QuantumGraph files that are used to run each quantum of processing and output logs that appear in a folder `submit/<outCollection>/logging`.
 
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
