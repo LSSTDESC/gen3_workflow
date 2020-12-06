@@ -1,0 +1,16 @@
+description: Single frame processing
+instrument: lsst.obs.lsst.LsstImSim
+tasks:
+  isr: lsst.ip.isr.IsrTask
+  characterizeImage: lsst.pipe.tasks.characterizeImage.CharacterizeImageTask
+  calibrate:
+    class: lsst.pipe.tasks.calibrate.CalibrateTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/calibration_filterMap.py
+subsets:
+  processCcd:
+    subset:
+      - isr
+      - characterizeImage
+      - calibrate
+    description: A set of tasks to run when doing single frame processing
