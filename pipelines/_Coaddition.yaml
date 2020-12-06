@@ -1,6 +1,6 @@
 description: Coaddition
 tasks:
-  makeWarpTask:
+  makeWarp:
     class: lsst.pipe.tasks.makeCoaddTempExp.MakeWarpTask
     config:
       matchingKernelSize: 29
@@ -12,3 +12,9 @@ tasks:
       doWriteEmptyWarps: True
       python: config.warpAndPsfMatch.psfMatch.kernel['AL'].alardSigGauss = [1.0, 2.0, 4.5]
   assembleCoadd: lsst.pipe.tasks.assembleCoadd.CompareWarpAssembleCoaddTask
+subsets:
+  coaddition:
+    subset:
+      - makeWarp
+      - assembleCoadd
+    description: A set of tasks to run when coadding images

@@ -14,3 +14,13 @@ tasks:
     class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
     config:
       priorityList: ["i", "r", "z", "y", "g", "u"]
+subsets:
+  multiband:
+    subset:
+      - detection
+      - mergeDetections
+      - deblend
+      - measure
+      - mergeMeasurements
+    description: A set of tasks to run when making measurements on one or more
+      bands of coadd outputs
