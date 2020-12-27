@@ -7,9 +7,11 @@ import lsst.utils
 from lsst.daf.butler import Butler
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 import parsl
+from desc.gen3_workflow.bps.wms.parsl.cori_apps import medium_bash_app,\
+    local_bash_app
 
 
-@parsl.bash_app
+@medium_bash_app
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
     Run a command line as a parsl.bash_app.

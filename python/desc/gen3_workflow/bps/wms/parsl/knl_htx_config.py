@@ -8,22 +8,22 @@ from parsl.executors.threads import ThreadPoolExecutor
 htx_factory = HtxFactory()
 
 cori_small = htx_factory.create(label='cori-small',
-                                arch='haswell',
-                                qos='debug',
-                                max_workers=25,
-                                walltime='0:30:00')
+                                arch='knl',
+                                qos='regular',
+                                max_workers=200,
+                                walltime='9:00:00')
 
 cori_medium = htx_factory.create(label='cori-medium',
-                                 arch='haswell',
-                                 qos='debug',
+                                 arch='knl',
+                                 qos='regular',
                                  max_workers=25,
-                                 walltime='0:30:00')
+                                 walltime='10:00:00')
 
 cori_large = htx_factory.create(label='cori-large',
-                                arch='haswell',
-                                qos='debug',
-                                max_workers=25,
-                                walltime='0:30:00')
+                                arch='knl',
+                                qos='regular',
+                                max_workers=24,
+                                walltime='40:00:00')
 
 local_executor = ThreadPoolExecutor(max_threads=4, label="submit-node")
 
