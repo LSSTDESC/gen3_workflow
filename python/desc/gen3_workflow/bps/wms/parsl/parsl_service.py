@@ -2,21 +2,45 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+from collections import defaultdict
 import subprocess
+import pandas as pd
 import lsst.utils
 from lsst.daf.butler import Butler
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
+from desc.gen3_workflow.bps.wms.parsl.cori_apps import \
+    small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
-from desc.gen3_workflow.bps.wms.parsl.cori_apps import medium_bash_app,\
-    local_bash_app
 
 
-@medium_bash_app
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
     Run a command line as a parsl.bash_app.
     """
     return command_line
+
+
+RUN_COMMANDS = dict(small=small_bash_app(run_command),
+                    medium=medium_bash_app(run_command),
+                    large=large_bash_app(run_command),
+                    local=local_bash_app(run_command))
+
+
+def get_run_command(job):
+    """
+    Get the run command appropriate for the required resources for the
+    specified job.
+    """
+    task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
+    if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
+                      'forcedPhotCoadd'):
+        job_size = 'large'
+    elif task_label.startswith('merge'):
+        job_size = 'small'
+    else:
+        job_size = 'medium'
+    print('get_run_command:', task_label, job_size)
+    return RUN_COMMANDS[job_size]
 
 
 @parsl.python_app
@@ -106,8 +130,9 @@ class ParslJob:
             self.future = no_op_job()
         if self.future is None:
             inputs = [_.get_future() for _ in self.prereqs]
-            self.future = run_command(self.command_line(), inputs=inputs,
-                                      **self.log_files())
+            my_run_command = get_run_command(self)
+            self.future = my_run_command(self.command_line(), inputs=inputs,
+                                         **self.log_files())
         return self.future
 
     def have_outputs(self):
@@ -149,15 +174,47 @@ class ParslGraph(dict):
         self.config = config
         self._pipetaskInit()
         self._ingest()
+        self.set_status()
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
+        self.num_visits = defaultdict(dict)
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
+            job = self.gwf.get_job(job_name)
+            if 'assembleCoadd' in job.label:
+                warps = (list(job.quantum_graph)[0]
+                         .quantum.inputs['deepCoadd_directWarp'])
+                tract_patch = warps[0].dataId['tract'], warps[0].dataId['patch']
+                band = warps[0].dataId['band']
+                self.num_visits[tract_patch][band] = len(warps)
             for successor_job in self.gwf.successors(job_name):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
+
+    def set_status(self):
+        """Set the pandas dataframe containing the workflow status."""
+        self.task_types = []
+        data = defaultdict(list)
+        for job_name, job in self.items():
+            task_type = job_name.split('_')[1]
+            data['task_type'].append(task_type)
+            if task_type not in self.task_types:
+                self.task_types.append(task_type)
+            data['job_name'].append(job_name)
+            data['status'].append(job.done)
+        self.status = pd.DataFrame(data=data)
+
+    def __str__(self):
+        """Return a summary of the workflow status."""
+        summary = ''
+        for task_type in self.task_types:
+            my_df = self.status.query(f'task_type == "{task_type}"')
+            num_tasks = len(my_df)
+            num_pending = len(my_df.query('status == False'))
+            summary += f'{task_type:25s}  {num_pending:5d}  {num_tasks:5d}\n'
+        return summary
 
     def __getitem__(self, job_name):
         """
