@@ -1,7 +1,10 @@
 description: Single frame processing
 instrument: lsst.obs.lsst.LsstImSim
 tasks:
-  isr: lsst.ip.isr.IsrTask
+  isr:
+    class: lsst.ip.isr.IsrTask
+    config:
+      doBrighterFatter: False
   characterizeImage: lsst.pipe.tasks.characterizeImage.CharacterizeImageTask
   calibrate:
     class: lsst.pipe.tasks.calibrate.CalibrateTask
