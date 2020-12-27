@@ -40,12 +40,13 @@ class HtxFactory:
         else:
             self.scheduler_options_template = scheduler_options_template
 
-    def create(self, label, arch, qos, max_workers, walltime):
+    def create(self, label, arch, qos, mem_per_worker, walltime):
         """Create a HighThroughputExecutor object"""
         scheduler_options = self.scheduler_options_template.format(arch, qos)
         provider = SlurmProvider("None", walltime=walltime,
                                  scheduler_options=scheduler_options,
                                  **self.provider_options)
-        return HighThroughputExecutor(label=label, max_workers=max_workers,
+        return HighThroughputExecutor(label=label,
+                                      mem_per_worker=mem_per_worker,
                                       address=address_by_hostname(),
                                       provider=provider, **self.htx_options)

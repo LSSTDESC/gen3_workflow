@@ -10,19 +10,19 @@ htx_factory = HtxFactory()
 cori_small = htx_factory.create(label='cori-small',
                                 arch='knl',
                                 qos='regular',
-                                max_workers=200,
+                                mem_per_worker=2,
                                 walltime='9:00:00')
 
 cori_medium = htx_factory.create(label='cori-medium',
                                  arch='knl',
                                  qos='regular',
-                                 max_workers=25,
+                                 mem_per_worker=2,
                                  walltime='10:00:00')
 
 cori_large = htx_factory.create(label='cori-large',
                                 arch='knl',
                                 qos='regular',
-                                max_workers=24,
+                                mem_per_worker=8,
                                 walltime='40:00:00')
 
 local_executor = ThreadPoolExecutor(max_threads=4, label="submit-node")
