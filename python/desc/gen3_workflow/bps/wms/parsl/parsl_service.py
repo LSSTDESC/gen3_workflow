@@ -3,9 +3,11 @@ Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
 from collections import defaultdict
+import pickle
 import subprocess
 import pandas as pd
 import lsst.utils
+import lsst.daf.butler
 from lsst.daf.butler import Butler
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from desc.gen3_workflow.bps.wms.parsl.cori_apps import \
@@ -174,7 +176,7 @@ class ParslGraph(dict):
         self.config = config
         self._pipetaskInit()
         self._ingest()
-        self.set_status()
+        self.update_status()
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
@@ -193,8 +195,8 @@ class ParslGraph(dict):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
 
-    def set_status(self):
-        """Set the pandas dataframe containing the workflow status."""
+    def update_status(self):
+        """Update the pandas dataframe containing the workflow status."""
         self.task_types = []
         data = defaultdict(list)
         for job_name, job in self.items():
@@ -234,6 +236,35 @@ class ParslGraph(dict):
             pipetaskInit = self.gwf.get_job('pipetaskInit')
             command = 'time ' + pipetaskInit.cmdline
             subprocess.check_call(command, shell=True)
+
+    def to_pickle(self, outfile):
+        """Save this ParslGraph object as a pickle file."""
+        # Set ParslJob.future attributes to None to avoid pickling
+        # problems with thread locks.
+        for parsl_job in self.values():
+            parsl_job.future = None
+        with open(outfile, 'wb') as fd:
+            pickle.dump(self, fd)
+
+    @staticmethod
+    def import_parsl_config(parsl_config):
+        """Import the parsl config module."""
+        lsst.utils.doImport(parsl_config)
+
+    @staticmethod
+    def read_pickle(pickle_file, parsl_config=None):
+        """Load a pickled ParslGraph object."""
+        # Need to have created a DimensionUniverse object to load a
+        # pickled QuantumGraph.
+        lsst.daf.butler.DimensionUniverse()
+        with open(pickle_file, 'rb') as fd:
+            parsl_graph = pickle.load(fd)
+        if parsl_config is not None:
+            ParslGraph.import_parsl_config(parsl_config)
+        else:
+            print("Need to import a parslConfig to set the compute "
+                  "resources to use as specified in the Parsl DFK.")
+        return parsl_graph
 
     def run(self, block=True):
         """
