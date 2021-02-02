@@ -184,6 +184,9 @@ class ParslGraph(dict):
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
+            # Make sure pipelines without downstream dependencies are
+            # ingested into the ParslGraph.
+            _ = self[job_name]
             job = self.gwf.get_job(job_name)
             if 'assembleCoadd' in job.label:
                 warps = (list(job.quantum_graph)[0]
