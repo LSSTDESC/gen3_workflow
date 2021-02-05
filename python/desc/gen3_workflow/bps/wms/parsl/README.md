@@ -1,7 +1,7 @@
 ## Using ctrl_bps and the Parsl-based plug-in to run Rubin Science Pipelines
 
 ### Requirements
-* `lsst_distrib` `w_2020_47` or later*
+* `lsst_distrib` `w_2021_03` or later*
 * `parsl`
 * `gen3_workflow`
 * A Gen3 repository
@@ -24,25 +24,26 @@ An example file is available [here](https://github.com/LSSTDESC/gen3_workflow/bl
 ```
 payload:
   butlerConfig: ${PWD}/gen3-repo
-  inCollection: LSSTCam-imSim/raw/all,LSSTCam-imSim/calib,ref_cat,skymaps/imsim
+  inCollection: LSSTCam-imSim/defaults
   outCollection: shared/parsl_patch_test_{timestamp}
   dataQuery: tract=3828 AND patch=24 AND skymap='DC2'
 
 parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
+#parslConfig: desc.gen3_workflow.bps.wms.parsl.knl_htx_config
 ```
 * `butlerConfig` should point to your Gen3 repo.
 * `inCollection` is the list of input collections.
 * `outCollection` is the name you give to your output collection.  The `{timestamp}` field ensures that unique collection names are assigned.
 * `dataQuery` is the data selection to be made.  The above example selects a single patch for processing using the `DC2` skymap.
-* `parslConfig` specifies which resources to use for running the pipetask jobs.  The two `threaded_pool_confg`s specify a maximum of 4 and 32 concurrent threads to be used; and the `ht_debug_config` is configured to submit to the debug queue running on a Haswell node.
+* `parslConfig` specifies which resources to use for running the pipetask jobs.  The two `threaded_pool_confg`s specify a maximum of 4 and 32 concurrent threads to be used.  The `ht_debug_config` is configured to submit to the debug queue running on a Haswell node, and `knl_htx_config` uses Parsl's [`HighThroughputExecutor`](https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors) to submit to KNL batch queues at NERSC.
 
 ### Running the Pipeline
 Running the pipeline code consists of entering
 ```
 $ bps submit bps_DRP.yaml
 ```
-where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` (or another parsl config that uses a [`HighThroughputExecutor`](https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors)), then a `runinfo` subdirectory will be created which contains Parsl log ouput.  The ctrl_bps code writes to a `submit` subdirectory which contains the QuantumGraph files that are used to run each quantum of processing and output logs that appear in a folder `submit/<outCollection>/logging`.
+where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` or `knl_htx_config`, then a `runinfo` subdirectory will be created which contains Parsl log ouput.  The ctrl_bps code writes to a `submit` subdirectory which contains the QuantumGraph files that are used to run each quantum of processing and output logs that appear in a folder `submit/<outCollection>/logging`.
 
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
