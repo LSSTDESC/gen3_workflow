@@ -50,7 +50,7 @@ def get_run_command(job):
     return RUN_COMMANDS[job_size]
 
 
-@parsl.python_app
+@parsl.python_app(executors=['submit-node'])
 def no_op_job():
     """
     A no-op parsl.python_app to return a future for a job that already
@@ -120,13 +120,17 @@ class ParslJob:
         or existence of outputs in the data repo.
         """
         if not self._done:
-            self._done = (self.status == 'succeeded')
+            self._done = (self.status == _SUCCEEDED)
         return self._done
 
     @property
     def status(self):
         """Return the job status, either _PENDING, _RUNNING, _SUCCEEDED, or
         _FAILED."""
+        if not hasattr(self, '_status'):
+            # handle older pickled ParslGraphs
+            self._status = _PENDING
+
         if self._status in (_SUCCEEDED, _FAILED):
             return self._status
 
