@@ -143,7 +143,16 @@ class ParslJob:
             if 'success' in outcome:
                 self._status = _SUCCEEDED
             elif 'failure' in outcome:
-                self._status = _FAILED
+                # Guard against failures caused by dataID/datasetType
+                # insertion conflicts in the registry db that arise
+                # from quanta that succeed but fail to write the
+                # "success" string to the log file before the batch
+                # allocation times out.  Do this by checking for the
+                # job outputs.
+                if self.have_outputs():
+                    self._status = _SUCCEEDED
+                else:
+                    self._status = _FAILED
 
         return self._status
 
