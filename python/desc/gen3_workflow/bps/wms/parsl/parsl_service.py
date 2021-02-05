@@ -14,6 +14,11 @@ from desc.gen3_workflow.bps.wms.parsl.cori_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
 
+# Job status values
+_PENDING = 'pending'
+_RUNNING = 'running'
+_SUCCEEDED = 'succeeded'
+_FAILED = 'failed'
 
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
@@ -76,13 +81,17 @@ class ParslJob:
         self.dependencies = set()
         self.prereqs = set()
         self._done = False
+        self._status = _PENDING
         self.future = None
 
     def command_line(self):
         """Return the job command line to run in bash."""
+        command = (self.gwf_job.cmdline +
+                   ' && >&2 echo success || >&2 echo failure')
         prefix = self.config.get('commandPrepend')
-        return ' '.join([prefix, self.gwf_job.cmdline]) if prefix \
-            else self.gwf_job.cmdline
+        if prefix:
+            command = ' '.join([prefix, command])
+        return command
 
     def add_dependency(self, dependency):
         """
@@ -110,12 +119,29 @@ class ParslJob:
         Execution state of the job based either on runtime futures
         or existence of outputs in the data repo.
         """
-        def future_settled(job):
-            return (job.future is not None and job.future.done()
-                    and job.future.exception() is None)
-        if not self._done and (future_settled(self) or self.have_outputs()):
-            self._done = True
+        if not self._done:
+            self._done = (self.status == 'succeeded')
         return self._done
+
+    @property
+    def status(self):
+        """Return the job status, either _PENDING, _RUNNING, _SUCCEEDED, or
+        _FAILED."""
+        if self._status in (_SUCCEEDED, _FAILED):
+            return self._status
+
+        # Check log file.
+        log_file = self.log_files()['stderr']
+        if os.path.isfile(log_file):
+            self._status = _RUNNING
+            with open(log_file) as fd:
+                outcome = fd.readlines()[-1]
+            if 'success' in outcome:
+                self._status = _SUCCEEDED
+            elif 'failure' in outcome:
+                self._status = _FAILED
+
+        return self._status
 
     def log_files(self):
         """
@@ -176,7 +202,7 @@ class ParslGraph(dict):
         self.config = config
         self._pipetaskInit()
         self._ingest()
-        self.update_status()
+        self._update_status()
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
@@ -198,7 +224,7 @@ class ParslGraph(dict):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
 
-    def update_status(self):
+    def _update_status(self):
         """Update the pandas dataframe containing the workflow status."""
         self.task_types = []
         data = defaultdict(list)
@@ -208,18 +234,26 @@ class ParslGraph(dict):
             if task_type not in self.task_types:
                 self.task_types.append(task_type)
             data['job_name'].append(job_name)
-            data['status'].append(job.done)
-        self.status = pd.DataFrame(data=data)
+            data['status'].append(job.status)
+        self._status_df = pd.DataFrame(data=data)
 
-    def __str__(self):
+    @property
+    def status(self):
         """Return a summary of the workflow status."""
-        summary = ''
+        self._update_status()
+        summary = ['task type                   '
+                   'pending  running  succeeded  failed  total\n']
         for task_type in self.task_types:
-            my_df = self.status.query(f'task_type == "{task_type}"')
+            my_df = self._status_df.query(f'task_type == "{task_type}"')
             num_tasks = len(my_df)
-            num_pending = len(my_df.query('status == False'))
-            summary += f'{task_type:25s}  {num_pending:5d}  {num_tasks:5d}\n'
-        return summary
+            num_pending = len(my_df.query(f'status == "{_PENDING}"'))
+            num_running = len(my_df.query(f'status == "{_RUNNING}"'))
+            num_succeeded = len(my_df.query(f'status == "{_SUCCEEDED}"'))
+            num_failed = len(my_df.query(f'status == "{_FAILED}"'))
+            summary.append(f'{task_type:25s}  {num_pending:5d}    '
+                           f'{num_running:5d}      {num_succeeded:5d}    '
+                           f'{num_failed:5d}  {num_tasks:5d}')
+        return '\n'.join(summary)
 
     def __getitem__(self, job_name):
         """
@@ -265,11 +299,10 @@ class ParslGraph(dict):
         if parsl_config is not None:
             ParslGraph.import_parsl_config(parsl_config)
         else:
-            print("Need to import a parslConfig to set the compute "
-                  "resources to use as specified in the Parsl DFK.")
+            ParslGraph.import_parsl_config(parsl_graph.config['parslConfig'])
         return parsl_graph
 
-    def run(self, block=True):
+    def run(self, block=False):
         """
         Run the encapsulated workflow by requesting the futures
         of the jobs at the endpoints of the DAG.
@@ -325,7 +358,7 @@ class ParslService(BaseWmsService):
         workflow: `desc.gen3_workflow.bps.wms.parsl_service.ParslWorkflow`
             Workflow object to execute.
         """
-        workflow.parsl_graph.run()
+        workflow.parsl_graph.run(block=True)
 
 
 class ParslWorkflow(BaseWmsWorkflow):
