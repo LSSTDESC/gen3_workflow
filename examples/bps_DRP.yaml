@@ -5,7 +5,7 @@ project: dev
 campaign: quick
 submitPath: ${PWD}/submit/{outCollection}
 computeSite: ncsapool
-requestMemory: 2GB
+requestMemory: 2
 requestCpus: 1
 
 # Make sure these values correspond to ones in the bin/run_demo.sh's
@@ -14,7 +14,7 @@ payload:
   runInit: true
   payloadName: DC2_dev_dataset
   butlerConfig: ${PWD}/gen3-repo
-  inCollection: LSSTCam-imSim/raw/all,LSSTCam-imSim/calib,ref_cat,skymaps/imsim
+  inCollection: LSSTCam-imSim/defaults
   outCollection: shared/parsl_patch_test_{timestamp}
   dataQuery: tract=3828 AND patch=24 AND skymap='DC2'
 
@@ -22,11 +22,12 @@ pipetask:
   pipetaskInit:
     runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --skip-existing --register-dataset-types --qgraph {qgraphFile} --no-versions"
   assembleCoadd:
-    requestMemory: 8GB
+    requestMemory: 8
 
 parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
+#parslConfig: desc.gen3_workflow.bps.wms.parsl.knl_htx_config
 commandPrepend: time
 
 wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
