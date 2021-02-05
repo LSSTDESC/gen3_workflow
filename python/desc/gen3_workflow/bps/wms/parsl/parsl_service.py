@@ -10,7 +10,7 @@ import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
-from desc.gen3_workflow.bps.wms.parsl.cori_apps import \
+from desc.gen3_workflow.bps.wms.parsl.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
 
