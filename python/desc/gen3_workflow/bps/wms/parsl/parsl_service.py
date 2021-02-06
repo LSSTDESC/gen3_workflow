@@ -46,7 +46,6 @@ def get_run_command(job):
         job_size = 'small'
     else:
         job_size = 'medium'
-    print('get_run_command:', task_label, job_size)
     return RUN_COMMANDS[job_size]
 
 
@@ -263,8 +262,8 @@ class ParslGraph(dict):
             num_running = len(my_df.query(f'status == "{_RUNNING}"'))
             num_succeeded = len(my_df.query(f'status == "{_SUCCEEDED}"'))
             num_failed = len(my_df.query(f'status == "{_FAILED}"'))
-            summary.append(f'{task_type:25s}  {num_pending:5d}    '
-                           f'{num_running:5d}      {num_succeeded:5d}    '
+            summary.append(f'{task_type:25s}     {num_pending:5d}    '
+                           f'{num_running:5d}      {num_succeeded:5d}   '
                            f'{num_failed:5d}  {num_tasks:5d}')
         return '\n'.join(summary)
 
