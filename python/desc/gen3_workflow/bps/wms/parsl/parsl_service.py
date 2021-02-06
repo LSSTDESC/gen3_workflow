@@ -115,8 +115,8 @@ class ParslJob:
     @property
     def done(self):
         """
-        Execution state of the job based either on runtime futures
-        or existence of outputs in the data repo.
+        Execution state of the job based whether the job has
+        written the 'success' string to the end of its log file.
         """
         if not self._done:
             self._done = (self.status == _SUCCEEDED)
