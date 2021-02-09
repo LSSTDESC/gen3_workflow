@@ -1,0 +1,36 @@
+operator: echarles
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/eotask.yaml"
+templateDataId: "{run}_{visit}_{detector}"
+project: dev
+campaign: quick
+submitPath: ${PWD}/submit/{outCollection}
+computeSite: slaclsf
+requestMemory: 2
+requestCpus: 25
+
+# Make sure these values correspond to ones in the bin/run_demo.sh's
+# pipetask command line.
+payload:
+  runInit: true
+  payloadName: slac_eotask_dev
+  butlerConfig: gen3-repo
+  inCollection: LSSTCam/raw/all s
+  outCollection: u/echarles/calib/bias/run_12622x2
+  dataQuery: instrument='LSSTCam' AND exposure.science_program='12622' AND exposure.image_type='bias'
+
+pipetask:
+  pipetaskInit:
+    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --skip-existing --register-dataset-types --qgraph {qgraphFile} --no-versions"
+  assembleCoadd:
+    requestMemory: 8
+
+#parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
+#parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
+#parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
+parslConfig: desc.gen3_workflow.bps.wms.parsl.lsf_htx_config
+commandPrepend: time
+
+wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
+clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
+createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument lsst.obs.lsst.LsstCamImSim -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
+runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-partial-outputs"
