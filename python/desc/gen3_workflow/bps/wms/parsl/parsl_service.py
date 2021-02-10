@@ -9,10 +9,38 @@ import pandas as pd
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler
+from lsst.ctrl.bps import BpsConfig
+from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from desc.gen3_workflow.bps.wms.parsl.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
+
+
+__all__ = ['start_pipeline', 'ParslGraph', 'ParslJob']
+
+
+def start_pipeline(config_file):
+    """
+    Function to submit a pipeline job using ctrl_bps and the
+    Parsl-based plugin.  The returned ParslGraph object provides
+    access to the underlying GenericWorkflowJob objects and
+    piplinetask quanta and a means of controlling and introspecting
+    their execution.
+
+    Parameters
+    ----------
+    config_file: str
+        ctrl_bps yaml config file.
+
+    Returns
+    -------
+    ParslGraph
+    """
+    config = BpsConfig(config_file, BPS_SEARCH_ORDER)
+    workflow = create_submission(config)
+    return workflow.parsl_graph
+
 
 # Job status values
 _PENDING = 'pending'
