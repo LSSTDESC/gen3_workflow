@@ -42,10 +42,10 @@ def get_run_command(job):
     if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
                       'forcedPhotCoadd'):
         job_size = 'large'
-    elif task_label.startswith('merge'):
-        job_size = 'small'
-    else:
+    elif task_label in ('makeWarp', 'mergeDetections', 'mergeMeasurements'):
         job_size = 'medium'
+    else:
+        job_size = 'small'
     return RUN_COMMANDS[job_size]
 
 

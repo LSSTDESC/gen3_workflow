@@ -11,12 +11,12 @@ batch_small = htx_factory.create(label='batch-small',
                                  arch='knl',
                                  qos='regular',
                                  mem_per_worker=2,
-                                 walltime='9:00:00')
+                                 walltime='10:00:00')
 
 batch_medium = htx_factory.create(label='batch-medium',
                                   arch='knl',
                                   qos='regular',
-                                  mem_per_worker=2,
+                                  mem_per_worker=4,
                                   walltime='10:00:00')
 
 batch_large = htx_factory.create(label='batch-large',
