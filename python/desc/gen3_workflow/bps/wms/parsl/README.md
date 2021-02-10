@@ -47,3 +47,132 @@ $ bps submit bps_DRP.yaml
 where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` or `knl_htx_config`, then a `runinfo` subdirectory will be created which contains Parsl log ouput.  The ctrl_bps code writes to a `submit` subdirectory which contains the QuantumGraph files that are used to run each quantum of processing and output logs that appear in a folder `submit/<outCollection>/logging`.
 
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
+
+### Running a Pipeline from the Python prompt
+Since Parsl requires an active python instance, running pipelines usually works better doing so from a python prompt.  There's a helper function to enable that from the python prompt:
+```
+>>> from desc.gen3_workflow.bps.wms.parsl import start_pipeline
+
+>>> graph = start_pipeline('bps_DRP.yaml')
+INFO  2021-02-10T05:13:25.047Z ctrl.mpexec.cmdLineFwk ()(cmdLineFwk.py:528)- QuantumGraph contains 29 quanta for 13 tasks, graph ID: '1612933997.1458979-461'
+
+real	0m6.199s
+user	0m5.493s
+sys	0m0.532s
+```
+The `start_pipeline` function will initialize the pipeline and compute the QuantumGraph for the `pipelineYaml`, `butlerConfig`, `inCollection` and `dataQuery` that are specified in the bps config file, but it will not launch any jobs.   The `start_pipeline` function will return a `ParslGraph` object that allows one to control the execution of the pipeline and also provides ways to inspect the status of a running pipeline.
+
+One can obtain the overall status with
+```
+>>> print(graph.status)
+task type                   pending  running  succeeded  failed  total
+
+isr                               5        0          0       0      5
+characterizeImage                 5        0          0       0      5
+calibrate                         5        0          0       0      5
+makeWarp                          1        0          0       0      1
+consolidateVisitSummary           1        0          0       0      1
+skyCorrectionTask                 5        0          0       0      5
+measure                           1        0          0       0      1
+assembleCoadd                     1        0          0       0      1
+detection                         1        0          0       0      1
+forcedPhotCoadd                   1        0          0       0      1
+deblend                           1        0          0       0      1
+mergeDetections                   1        0          0       0      1
+mergeMeasurements                 1        0          0       0      1
+```
+Here we see the different types of tasks (as given by the task labels in the pipeline yaml file), and the execution state of each task or job.
+
+The `ParslGraph` object has a reference to the `BpsConfig` object that contains the values set in the bps config file.  For this example, the `dataQuery` value shows that we are processing data from a single visit that overlaps with a particular patch:
+```
+>>> print(graph.config['dataQuery'])
+tract=3828 AND patch=24 AND skymap='DC2' AND visit=192355
+```
+To run the full pipeline, just call the `run` command:
+```
+>>> graph.run()
+```
+This function traverses the full pipeline DAG, assigns each job to specific resources, passes the dependences to Parsl, and Parsl manages the job executions using the specified resources.
+
+While the jobs are running, one can print the pipeline status at any time:
+```
+>>> print(graph.status)
+task type                   pending  running  succeeded  failed  total
+
+isr                               0        1          4       0      5
+characterizeImage                 2        3          0       0      5
+calibrate                         5        0          0       0      5
+consolidateVisitSummary           1        0          0       0      1
+makeWarp                          1        0          0       0      1
+skyCorrectionTask                 5        0          0       0      5
+measure                           1        0          0       0      1
+assembleCoadd                     1        0          0       0      1
+forcedPhotCoadd                   1        0          0       0      1
+detection                         1        0          0       0      1
+mergeDetections                   1        0          0       0      1
+deblend                           1        0          0       0      1
+mergeMeasurements                 1        0          0       0      1
+```
+
+#### Saving state and restarting pipelines
+Each time `start_pipeline` is called, it generates a new pipeline instance, and it uses the `outCollection` parameter to set the location of the QuantumGraph files it writes for each job, and it uses that collection name in the registry of the data repository.  Database conflicts will occur if a pipeline instance tries to reuse an existing collection name, so the `outCollection` values can use the `timestamp` variable to ensure that the output collection names are unique, e.g., in our example bps yaml config file, we have
+```
+  outCollection: shared/parsl_3828_24_192355/{timestamp}
+```
+and this will produce a unique collection name:
+```
+>>> print(graph.config['outCollection'])
+shared/parsl_3828_24_192355/20210210T051311Z
+```
+
+However, if the python session terminates before the pipeline jobs finish, we need a way of recovering that pipeline instance without re-initializing the full pipeline.  We can do this by saving the `ParslGraph` object as a pickle file:
+```
+>>> graph.to_pickle('drp_3828_24_192355.pickle')
+```
+This can be done at any time while the pipeline is running, but it's useful to do it as soon as the `start_pipeline` function returns the `ParslGraph` object.
+
+This `ParslGraph` can be un-pickled later in a new python session:
+```
+>>> from desc.gen3_workflow.bps.wms.parsl import ParslGraph
+>>> graph = ParslGraph.read_pickle('drp_3828_24_192355.pickle')
+```
+Since the pipeline state is saved on disk in the registry database and in the log file output, the status of the unpickled graph will reflect the state of the pipeline when the python session ended
+```
+>>> print(graph.status)
+task type                   pending  running  succeeded  failed  total
+
+isr                               0        0          5       0      5
+characterizeImage                 1        0          3       1      5
+calibrate                         5        0          0       0      5
+consolidateVisitSummary           1        0          0       0      1
+makeWarp                          1        0          0       0      1
+skyCorrectionTask                 5        0          0       0      5
+measure                           1        0          0       0      1
+assembleCoadd                     1        0          0       0      1
+forcedPhotCoadd                   1        0          0       0      1
+detection                         1        0          0       0      1
+mergeDetections                   1        0          0       0      1
+deblend                           1        0          0       0      1
+mergeMeasurements                 1        0          0       0      1
+```
+The pipeline can be restarted from this point simply by issuing the `run` command again:
+```
+>>> graph.run()
+>>> print(graph.status)
+task type                   pending  running  succeeded  failed  total
+
+isr                               0        0          5       0      5
+characterizeImage                 0        1          3       1      5
+calibrate                         3        2          0       0      5
+consolidateVisitSummary           1        0          0       0      1
+makeWarp                          1        0          0       0      1
+skyCorrectionTask                 5        0          0       0      5
+measure                           1        0          0       0      1
+assembleCoadd                     1        0          0       0      1
+forcedPhotCoadd                   1        0          0       0      1
+detection                         1        0          0       0      1
+mergeDetections                   1        0          0       0      1
+deblend                           1        0          0       0      1
+mergeMeasurements                 1        0          0       0      1
+```
+Since some jobs may have terminated before finishing when the python instance stopped, they'll appear in the `running` state even though they aren't actually running, but eventually Parsl *will* execute any job that hasn't either finished successfully or failed with an error.
