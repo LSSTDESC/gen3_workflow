@@ -3,8 +3,9 @@ Factory for creating HighThroughputExecutor objects for running at NERSC.
 """
 from parsl.addresses import address_by_hostname
 from parsl.executors import HighThroughputExecutor
-from parsl.launchers import WrapperLauncher
-from parsl.providers import LsfProvider
+from parsl.launchers import JsrunLauncher
+from parsl.providers import LSFProvider
+from parsl.channels import LocalChannel
 
 
 HTX_OPTIONS = dict(worker_debug=False,
@@ -12,12 +13,11 @@ HTX_OPTIONS = dict(worker_debug=False,
                    heartbeat_threshold=180)
 
 PROVIDER_OPTIONS = dict(nodes_per_block=1,
-                        exclusive=True,
-                        init_blocks=0,
+                        init_blocks=1,
                         min_blocks=0,
                         max_blocks=1,
                         parallelism=0,
-                        launcher=WrappedLauncher(),
+                        launcher=JsrunLauncher(),
                         cmd_timeout=300)
 
 
@@ -40,7 +40,7 @@ class LsfFactory:
     def create(self, label, arch, qos, mem_per_worker, walltime):
         """Create a HighThroughputExecutor object"""
         scheduler_options = self.scheduler_options_template.format(arch, qos)
-        provider = LsfProvider("None", walltime=walltime,
+        provider = LSFProvider(walltime=walltime,
                                scheduler_options=scheduler_options,
                                **self.provider_options)
         return HighThroughputExecutor(label=label,

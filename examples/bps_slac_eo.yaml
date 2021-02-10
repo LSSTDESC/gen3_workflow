@@ -27,7 +27,7 @@ pipetask:
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_32
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
-parslConfig: desc.gen3_workflow.bps.wms.parsl.lsf_htx_config
+parslConfig: desc.gen3_workflow.bps.wms.parsl.knl_htx_config
 commandPrepend: time
 
 wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
