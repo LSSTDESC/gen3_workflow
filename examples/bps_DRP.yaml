@@ -29,6 +29,7 @@ parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.ht_debug_config
 #parslConfig: desc.gen3_workflow.bps.wms.parsl.knl_htx_config
 commandPrepend: time
+#commandPrepend: shifter -E --image=lsstsqre/centos:7-stack-lsst_distrib-w_2021_08 ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/bps/wms/parsl/cl_wrapper.sh
 
 wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
