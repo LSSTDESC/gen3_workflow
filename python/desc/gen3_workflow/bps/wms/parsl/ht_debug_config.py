@@ -10,19 +10,19 @@ htx_factory = HtxFactory()
 batch_small = htx_factory.create(label='batch-small',
                                  arch='haswell',
                                  qos='debug',
-                                 max_workers=25,
+                                 mem_per_worker=4,
                                  walltime='0:30:00')
 
 batch_medium = htx_factory.create(label='batch-medium',
                                   arch='haswell',
                                   qos='debug',
-                                  max_workers=25,
+                                  mem_per_worker=4,
                                   walltime='0:30:00')
 
 batch_large = htx_factory.create(label='batch-large',
                                  arch='haswell',
                                  qos='debug',
-                                 max_workers=25,
+                                 mem_per_worker=4,
                                  walltime='0:30:00')
 
 local_executor = ThreadPoolExecutor(max_threads=4, label="submit-node")
