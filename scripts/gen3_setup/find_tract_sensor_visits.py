@@ -33,8 +33,8 @@ with sqlite3.connect(tracts_mapping_db) as conn:
         query += f' and patch in {patch_list}'
     df = pd.read_sql(query, conn)
 
-missing_sensor_visits = []
-raw_files = []
+missing_sensor_visits = set()
+raw_files = set()
 raw_image_root_dir = '/global/cfs/cdirs/lsst/shared/DC2-prod/Run2.2i/sim'
 for iloc in range(len(df)):
     if iloc % (len(df)//20) == 0:
@@ -45,6 +45,14 @@ for iloc in range(len(df)):
     pattern = os.path.join(raw_image_root_dir, 'y?-wfd', f'{row.visit:08d}',
                            f'lsst_a_{row.visit}_{det_name}_?.fits')
     try:
-        raw_files.append(glob.glob(pattern)[0])
+        raw_files.add(glob.glob(pattern)[0])
     except IndexError:
         missing_sensor_visits.append((visit, detector))
+
+# Create a directory of symlinks that one can run `rsync -avzL` on to copy
+# the files to the final location.
+dest_dir = f'{tract}'
+os.makedirs(dest_dir, exist_ok=True)
+for raw_file in raw_files:
+    dest = os.path.join(dest_dir, os.path.basename(raw_file))
+    os.symlink(raw_file, dest)
