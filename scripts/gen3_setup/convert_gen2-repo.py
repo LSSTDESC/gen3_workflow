@@ -87,9 +87,9 @@ if __name__ == '__main__':
     if default_collection in list(registry.queryCollections()):
         registry.removeCollection(default_collection)
 
-        registry.registerCollection(default_collection,
-                                    type=daf_butler.CollectionType.CHAINED)
-        registry.setCollectionChain(default_collection,
-                                    ['LSSTCam-imSim/raw/all',
-                                     'LSSTCam-imSim/calib',
-                                     'skymaps', 'ref_cat'])
+    registry.registerCollection(default_collection,
+                                type=daf_butler.CollectionType.CHAINED)
+    registry.setCollectionChain(default_collection,
+                                ['LSSTCam-imSim/raw/all',
+                                 'LSSTCam-imSim/calib',
+                                 'skymaps', 'ref_cat'])
