@@ -14,7 +14,7 @@ from lsst.daf.butler import Butler
 from lsst.daf.base import PropertyList, PropertySet
 
 
-__all__ = ['parse_metadata_yaml', 'get_resource_info']
+__all__ = ['parse_metadata_yaml', 'gather_resource_info']
 
 
 def parse_metadata_yaml(yaml_file):
