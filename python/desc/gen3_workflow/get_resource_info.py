@@ -1,3 +1,6 @@
+"""
+Code to gather resource usage information from per-task metadata.
+"""
 import os
 import sys
 import re
@@ -80,15 +83,3 @@ def gather_resource_info(butler, dataId, verbose=False):
         data['maxRSS'].append(results.get('MaxResidentSetSize', None))
 
     return pd.DataFrame(data=data)
-
-
-if __name__ == '__main__':
-    repo = 'gen3-tract-3828'
-    collections = ('shared/sfp_3828_20210203T231942Z',
-                   'shared/coadd_3828_20210206T000350Z',)
-    butler = Butler(repo, collections=collections)
-
-    tract = 3828
-    patch = 24
-    df = gather_resource_info(butler, dict(tract=tract, patch=patch),
-                              verbose=True)
