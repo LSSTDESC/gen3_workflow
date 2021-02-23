@@ -1,1 +1,1 @@
-from .gen3_workflow import *
+from .gather_resource_info import *
