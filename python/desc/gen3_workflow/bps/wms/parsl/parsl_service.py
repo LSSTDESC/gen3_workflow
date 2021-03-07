@@ -228,7 +228,7 @@ class ParslGraph(dict):
     the generic_worklow DAG.  This class also serves as a container
     for all of the jobs in the DAG.
     """
-    def __init__(self, generic_workflow, config):
+    def __init__(self, generic_workflow, config, do_init=True):
         """
         Parameters
         ----------
@@ -236,11 +236,14 @@ class ParslGraph(dict):
             Generic representation of a single workflow.
         config: `lsst.ctrl.bps.BpsConfig`
             Configuration of the worklow.
+        do_init: bool [True]
+            Flag to run pipetaskInit.
         """
         super().__init__()
         self.gwf = generic_workflow
         self.config = config
-        self._pipetaskInit()
+        if do_init:
+            self._pipetaskInit()
         self._ingest()
         self._update_status()
 
@@ -314,33 +317,35 @@ class ParslGraph(dict):
             command = 'time ' + pipetaskInit.cmdline
             subprocess.check_call(command, shell=True)
 
-    def to_pickle(self, outfile):
-        """Save this ParslGraph object as a pickle file."""
-        # Set ParslJob.future attributes to None to avoid pickling
-        # problems with thread locks.
-        for parsl_job in self.values():
-            parsl_job.future = None
-        with open(outfile, 'wb') as fd:
-            pickle.dump(self, fd)
-
     @staticmethod
     def import_parsl_config(parsl_config):
         """Import the parsl config module."""
         lsst.utils.doImport(parsl_config)
 
+    def save_config(self, config_file):
+        """Save the bps config as a pickle file."""
+        with open(config_file, 'wb') as fd:
+            pickle.dump(self.config, fd)
+
     @staticmethod
-    def read_pickle(pickle_file, parsl_config=None):
-        """Load a pickled ParslGraph object."""
+    def restore(config_file, parsl_config=None):
+        """
+        Restore the ParslGraph from a pickled bps config file.
+        """
         # Need to have created a DimensionUniverse object to load a
         # pickled QuantumGraph.
         lsst.daf.butler.DimensionUniverse()
-        with open(pickle_file, 'rb') as fd:
-            parsl_graph = pickle.load(fd)
+        with open(config_file, 'rb') as fd:
+            config = pickle.load(fd)
+        gwf_pickle_file = os.path.join(config['submit_path'],
+                                       'bps_generic_workflow.pickle')
+        with open(gwf_pickle_file, 'rb') as fd:
+            generic_workflow = pickle.load(fd)
         if parsl_config is not None:
             ParslGraph.import_parsl_config(parsl_config)
         else:
-            ParslGraph.import_parsl_config(parsl_graph.config['parslConfig'])
-        return parsl_graph
+            ParslGraph.import_parsl_config(config['parslConfig'])
+        return ParslGraph(generic_workflow, config, do_init=False)
 
     def run(self, block=False):
         """
