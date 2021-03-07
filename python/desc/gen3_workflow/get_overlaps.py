@@ -5,7 +5,7 @@ the GenericWorkflowGraph via a ParslGraph.
 from collections import defaultdict
 import pandas as pd
 
-__all__ == ['get_overlaps']
+__all__ = ['get_overlaps']
 
 def get_overlaps(graph):
     """

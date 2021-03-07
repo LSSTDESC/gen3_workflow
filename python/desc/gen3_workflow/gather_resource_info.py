@@ -81,5 +81,7 @@ def gather_resource_info(butler, dataId, verbose=False):
         results = parse_metadata_yaml(yaml_file)
         data['cpu_time'].append(results.get('EndCpuTime', None))
         data['maxRSS'].append(results.get('MaxResidentSetSize', None))
+    if verbose:
+        print()
 
     return pd.DataFrame(data=data)
