@@ -49,7 +49,7 @@ where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
 
 ### Running a Pipeline from the Python prompt
-Since Parsl requires an active python instance, running pipelines usually works better doing so from a python prompt.  There's a helper function to enable that from the python prompt:
+Since Parsl requires an active python instance, running pipelines usually works better doing so from a python prompt.  There's a helper function to enable that:
 ```
 >>> from desc.gen3_workflow.bps.wms.parsl import start_pipeline
 
@@ -125,18 +125,18 @@ and this will produce a unique collection name:
 shared/parsl_3828_24_192355/20210210T051311Z
 ```
 
-However, if the python session terminates before the pipeline jobs finish, we need a way of recovering that pipeline instance without re-initializing the full pipeline.  We can do this by saving the `ParslGraph` object as a pickle file:
+However, if the python session terminates before the pipeline jobs finish, we need a way of recovering that pipeline instance without re-initializing the full pipeline.  We can do this by saving the config attribute of the `ParslGraph` object as a pickle file:
 ```
->>> graph.to_pickle('drp_3828_24_192355.pickle')
+>>> graph.save_config('drp_3828_24_192355.pickle')
 ```
 This can be done at any time while the pipeline is running, but it's useful to do it as soon as the `start_pipeline` function returns the `ParslGraph` object.
 
-This `ParslGraph` can be un-pickled later in a new python session:
+The `ParslGraph` associated with that pickled config can restored in a new python session:
 ```
 >>> from desc.gen3_workflow.bps.wms.parsl import ParslGraph
->>> graph = ParslGraph.read_pickle('drp_3828_24_192355.pickle')
+>>> graph = ParslGraph.restore('drp_3828_24_192355.pickle')
 ```
-Since the pipeline state is saved on disk in the registry database and in the log file output, the status of the unpickled graph will reflect the state of the pipeline when the python session ended
+Since the pipeline state is saved on disk in the registry database, in the associate `ctrl_bps` files in the `submit` folder, and in the log file output, the status of the restored graph will reflect the state of the pipeline as it was encoded in those locations when the python session ended:
 ```
 >>> print(graph.status)
 task type                   pending  running  succeeded  failed  total
