@@ -32,6 +32,7 @@ commandPrepend: time
 #commandPrepend: shifter -E --image=lsstsqre/centos:7-stack-lsst_distrib-w_2021_08 ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/bps/wms/parsl/cl_wrapper.sh
 
 wmsServiceClass: desc.gen3_workflow.bps.wms.parsl.parsl_service.ParslService
+bpsUseShared: true
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
 createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument lsst.obs.lsst.LsstCamImSim -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
 runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-partial-outputs"
