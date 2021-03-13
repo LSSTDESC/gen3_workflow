@@ -5,6 +5,7 @@ tasks:
     class: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
     config:
       priorityList: ["i", "r", "z", "y", "g", "u"]
+  #deblend: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesSingleTask
   deblend: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesMultiTask
   measure:
     class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
