@@ -1,0 +1,4 @@
+description: Coaddition and Detection
+inherits:
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Coaddition.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Detection.yaml

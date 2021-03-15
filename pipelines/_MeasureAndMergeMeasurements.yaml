@@ -1,0 +1,17 @@
+description: Measure sources and merge those measurements across bands
+tasks:
+  measure:
+    class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/measurement_filterMap.py
+  mergeMeasurements:
+    class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
+subsets:
+  measure_and_merge_measurements:
+    subset:
+      - measure
+      - mergeMeasurements
+    description: Source measurement on coadds after detection and deblending
+      and merging of the measured sources.

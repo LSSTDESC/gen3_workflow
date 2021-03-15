@@ -1,0 +1,8 @@
+description: Coaddition and detection
+tasks:
+  detection: lsst.pipe.tasks.multiBand.DetectCoaddSourcesTask
+subsets:
+  detection:
+    subset:
+      - detection
+    description: Detection on coadded images
