@@ -253,41 +253,70 @@ class ParslGraph(dict):
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
+
             # Make sure pipelines without downstream dependencies are
             # ingested into the ParslGraph.
             _ = self[job_name]
             job = self.gwf.get_job(job_name)
+
+            # Extract the numbers of visits per patch from the
+            # `assembleCoadd` tasks.
             if 'assembleCoadd' in job.label:
                 warps = (list(job.quantum_graph)[0]
                          .quantum.inputs['deepCoadd_directWarp'])
                 tract_patch = warps[0].dataId['tract'], warps[0].dataId['patch']
                 band = warps[0].dataId['band']
                 self.num_visits[tract_patch][band] = len(warps)
+
             for successor_job in self.gwf.successors(job_name):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
 
     def _update_status(self):
-        """Update the pandas dataframe containing the workflow status."""
+        """
+        Update the pandas dataframe containing the workflow status and
+        job metadata.
+        """
         self.task_types = []
         data = defaultdict(list)
+        _, template_id = self.config.search('templateDataId',
+                                            opt=dict(replaceVars=False))
+        md_columns = [_.strip('{}') for _ in template_id.split('_')]
+        md_columns.insert(0, 'task_type')
+        def int_cast(value):
+            try:
+                return int(value)
+            except ValueError:
+                return value
         for job_name, job in self.items():
-            task_type = job_name.split('_')[1]
-            data['task_type'].append(task_type)
-            if task_type not in self.task_types:
-                self.task_types.append(task_type)
+            md = {_: '' for _ in md_columns}
+            for key, value in zip(md_columns, job_name.split('_')[1:]):
+                md[key] = int_cast(value)
+            for key, value in md.items():
+                data[key].append(value)
+            if data['task_type'][-1] not in self.task_types:
+                self.task_types.append(data['task_type'][-1])
             data['job_name'].append(job_name)
             data['status'].append(job.status)
-        self._status_df = pd.DataFrame(data=data)
+        self.df = pd.DataFrame(data=data)
 
-    @property
+    def get_jobs(self, task_type, query=None):
+        """
+        Return a list of job names for the specified task applying an
+        optional query on the status data frame.
+        """
+        my_query = f'(task_type == "{task_type}")'
+        if query is not None:
+            my_query = ' and '.join((my_query, query))
+        return list(self.df.query(my_query)['job_name'])
+
     def status(self):
-        """Return a summary of the workflow status."""
+        """Print a summary of the workflow status."""
         self._update_status()
         summary = ['task type                   '
                    'pending  running  succeeded  failed  total\n']
         for task_type in self.task_types:
-            my_df = self._status_df.query(f'task_type == "{task_type}"')
+            my_df = self.df.query(f'task_type == "{task_type}"')
             num_tasks = len(my_df)
             num_pending = len(my_df.query(f'status == "{_PENDING}"'))
             num_running = len(my_df.query(f'status == "{_RUNNING}"'))
@@ -296,7 +325,7 @@ class ParslGraph(dict):
             summary.append(f'{task_type:25s}     {num_pending:5d}    '
                            f'{num_running:5d}      {num_succeeded:5d}   '
                            f'{num_failed:5d}  {num_tasks:5d}')
-        return '\n'.join(summary)
+        print('\n'.join(summary))
 
     def __getitem__(self, job_name):
         """
@@ -347,13 +376,18 @@ class ParslGraph(dict):
             ParslGraph.import_parsl_config(config['parslConfig'])
         return ParslGraph(generic_workflow, config, do_init=False)
 
-    def run(self, block=False):
+    def run(self, jobs=None, block=False):
         """
-        Run the encapsulated workflow by requesting the futures
-        of the jobs at the endpoints of the DAG.
+        Run the encapsulated workflow by requesting the futures of
+        the requested jobs or of those at the endpoints of the DAG.
         """
-        futures = [job.get_future() for job in self.values()
-                   if not job.dependencies]
+        if jobs is not None:
+            futures = [self[job_name].get_future() for job_name in jobs]
+        else:
+            # Run all of the jobs at the endpoints of the DAG
+            futures = [job.get_future() for job in self.values()
+                       if not job.dependencies]
+
         if block:
             # Calling .result() for each future blocks returning from
             # this method until all the jobs have executed.  This is

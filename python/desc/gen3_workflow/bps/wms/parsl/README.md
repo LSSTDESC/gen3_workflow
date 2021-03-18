@@ -64,7 +64,7 @@ The `start_pipeline` function will initialize the pipeline and compute the Quant
 
 One can obtain the overall status with
 ```
->>> print(graph.status)
+>>> graph.status()
 task type                   pending  running  succeeded  failed  total
 
 isr                               5        0          0       0      5
@@ -96,7 +96,7 @@ This function traverses the full pipeline DAG, assigns each job to specific reso
 
 While the jobs are running, one can print the pipeline status at any time:
 ```
->>> print(graph.status)
+>>> graph.status()
 task type                   pending  running  succeeded  failed  total
 
 isr                               0        1          4       0      5
@@ -138,7 +138,7 @@ The `ParslGraph` associated with that pickled config can restored in a new pytho
 ```
 Since the pipeline state is saved on disk in the registry database, in the associate `ctrl_bps` files in the `submit` folder, and in the log file output, the status of the restored graph will reflect the state of the pipeline as it was encoded in those locations when the python session ended:
 ```
->>> print(graph.status)
+>>> graph.status()
 task type                   pending  running  succeeded  failed  total
 
 isr                               0        0          5       0      5
@@ -158,7 +158,7 @@ mergeMeasurements                 1        0          0       0      1
 The pipeline can be restarted from this point simply by issuing the `run` command again:
 ```
 >>> graph.run()
->>> print(graph.status)
+>>> graph.status()
 task type                   pending  running  succeeded  failed  total
 
 isr                               0        0          5       0      5
