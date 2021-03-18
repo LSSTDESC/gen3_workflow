@@ -4,7 +4,4 @@ inherits:
   #- location: $GEN3_WORKFLOW_DIR/pipelines/_SkyCorrection.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_ConsolidateVisit.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_Coaddition.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Detection.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_MergeDetectionsAndDeblend.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_MeasureAndMergeMeasuerments.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Forced.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Multiband.yaml
