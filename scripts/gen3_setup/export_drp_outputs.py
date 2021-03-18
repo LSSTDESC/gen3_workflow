@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('repo', type=str, help='Source repository')
 parser.add_argument('--collections', type=str, nargs='+',
                     help='Collections to export.')
-parser.add_argument('--export_file', type=str, default='export.yaml',
+parser.add_argument('--export-file', type=str, default='export.yaml',
                     help='Name of export file.')
 
 args = parser.parse_args()
