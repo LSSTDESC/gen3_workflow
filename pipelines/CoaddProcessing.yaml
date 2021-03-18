@@ -1,0 +1,5 @@
+description: Coadd Processing
+inherits:
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Coaddition.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Multiband.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Forced.yaml
