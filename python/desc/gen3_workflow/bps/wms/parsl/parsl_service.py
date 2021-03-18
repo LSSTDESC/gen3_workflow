@@ -44,6 +44,7 @@ def start_pipeline(config_file):
 
 # Job status values
 _PENDING = 'pending'
+_SCHEDULED = 'scheduled'
 _RUNNING = 'running'
 _SUCCEEDED = 'succeeded'
 _FAILED = 'failed'
@@ -152,8 +153,8 @@ class ParslJob:
 
     @property
     def status(self):
-        """Return the job status, either _PENDING, _RUNNING, _SUCCEEDED, or
-        _FAILED."""
+        """Return the job status, either _PENDING, _SCHEDULED, _RUNNING,
+        _SUCCEEDED, or _FAILED."""
         if not hasattr(self, '_status'):
             # handle older pickled ParslGraphs
             self._status = _PENDING
@@ -180,6 +181,11 @@ class ParslJob:
                     self._status = _SUCCEEDED
                 else:
                     self._status = _FAILED
+
+        # Define _SCHEDULED as currently _PENDING but with
+        # `self.future is not None`.
+        if self._status == _PENDING and self.future is not None:
+            self._status = _SCHEDULED
 
         return self._status
 
@@ -313,16 +319,18 @@ class ParslGraph(dict):
     def status(self):
         """Print a summary of the workflow status."""
         self._update_status()
-        summary = ['task type                   '
-                   'pending  running  succeeded  failed  total\n']
+        summary = ['task type                '
+                   'pending  scheduled  running  succeeded  failed  total\n']
         for task_type in self.task_types:
             my_df = self.df.query(f'task_type == "{task_type}"')
             num_tasks = len(my_df)
             num_pending = len(my_df.query(f'status == "{_PENDING}"'))
+            num_scheduled = len(my_df.query(f'status == "{_SCHEDULED}"'))
             num_running = len(my_df.query(f'status == "{_RUNNING}"'))
             num_succeeded = len(my_df.query(f'status == "{_SUCCEEDED}"'))
             num_failed = len(my_df.query(f'status == "{_FAILED}"'))
-            summary.append(f'{task_type:25s}     {num_pending:5d}    '
+            summary.append(f'{task_type:25s}  {num_pending:5d}      '
+                           f'{num_scheduled:5d}    '
                            f'{num_running:5d}      {num_succeeded:5d}   '
                            f'{num_failed:5d}  {num_tasks:5d}')
         print('\n'.join(summary))
