@@ -14,7 +14,7 @@ from lsst.daf.butler import Butler
 from lsst.daf.base import PropertyList, PropertySet
 
 
-__all__ = ['parse_metadata_yaml', 'gather_resource_info']
+__all__ = ['parse_metadata_yaml', 'gather_resource_info', 'add_num_visits']
 
 
 def parse_metadata_yaml(yaml_file):
@@ -86,3 +86,23 @@ def gather_resource_info(butler, dataId, collections=None, verbose=False):
         print()
 
     return pd.DataFrame(data=data)
+
+
+def add_num_visits(df, num_visits):
+    """
+    Add a column to the data frame from the gather_resource_info
+    function with the number of visits for the relevant data selection
+    using a ParslGraph.num_visits object.
+    """
+    data = []
+    for _, row in df.iterrows():
+        key = row.tract, row.patch
+        band = row.band
+        if band is not None:
+            data.append(num_visits[key][band])
+        elif row.task == 'deblend':
+            data.append(sum(num_visits[key].values()))
+        else:
+            data.append(None)
+    df['num_visits'] = data
+    return df
