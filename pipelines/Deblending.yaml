@@ -1,3 +1,0 @@
-description: Merging detections and deblending
-inherits:
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_MergeDetectionsAndDeblend.yaml

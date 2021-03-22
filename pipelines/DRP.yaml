@@ -1,7 +1,8 @@
 description: DRP
-inherits:
+imports:
   - location: $GEN3_WORKFLOW_DIR/pipelines/_SingleFrame.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_SkyCorrection.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_ConsolidateVisit.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_Coaddition.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_Multiband.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_Forced.yaml

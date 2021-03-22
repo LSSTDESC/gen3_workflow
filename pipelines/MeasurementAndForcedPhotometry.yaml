@@ -1,4 +1,0 @@
-description: Measure sources, merged measurements, and run forced photometry
-inherits:
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_MeasureAndMergeMeasurements.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Forced.yaml
