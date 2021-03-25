@@ -67,6 +67,12 @@ def get_run_command(job):
     Get the run command appropriate for the required resources for the
     specified job.
     """
+    parslConfigBase = job.config['parslConfig'].split('.')[-1]
+    if parslConfigBase.startswith('workQueue'):
+        wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=True,
+                                     ignore_for_cache=['stdout', 'stderr'])
+        return wq_bash_app(run_command)
+
     task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
     if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
                       'forcedPhotCoadd'):
@@ -380,6 +386,7 @@ class ParslGraph(dict):
             generic_workflow = pickle.load(fd)
         if parsl_config is not None:
             ParslGraph.import_parsl_config(parsl_config)
+            config['parslConfig'] = parsl_config
         else:
             ParslGraph.import_parsl_config(config['parslConfig'])
         return ParslGraph(generic_workflow, config, do_init=False)
