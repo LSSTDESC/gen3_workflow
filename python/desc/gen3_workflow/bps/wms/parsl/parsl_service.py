@@ -121,7 +121,7 @@ class ParslJob:
     def command_line(self):
         """Return the job command line to run in bash."""
         command = (self.gwf_job.cmdline +
-                   ' && >&2 echo success || >&2 echo failure')
+                   ' && >&2 echo success || (>&2 echo failure; false)')
         prefix = self.config.get('commandPrepend')
         if prefix:
             command = ' '.join([prefix, command])
@@ -174,9 +174,9 @@ class ParslJob:
             self._status = _RUNNING
             with open(log_file) as fd:
                 outcome = fd.readlines()[-1]
-            if 'success' in outcome:
+            if outcome.startswith('success'):
                 self._status = _SUCCEEDED
-            elif 'failure' in outcome:
+            elif outcome.startswith('failure'):
                 # Guard against failures caused by dataID/datasetType
                 # insertion conflicts in the registry db that arise
                 # from quanta that succeed but fail to write the

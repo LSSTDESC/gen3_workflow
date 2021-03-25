@@ -11,8 +11,6 @@ dev_dir=/global/u1/j/jchiang8/dev
 source ${stack_dir}/loadLSST.bash
 setup lsst_distrib
 setup -r ${dev_dir}/gen3_workflow -j
-setup -r ${dev_dir}/daf_butler -j
-setup -r ${dev_dir}/ctrl_bps -j
 export PATH=${home}/bin:${home}/.local/bin:${PATH}
 export OMP_NUM_THREADS=1
 

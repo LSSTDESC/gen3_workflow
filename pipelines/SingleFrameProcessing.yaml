@@ -1,5 +1,5 @@
 description: Single frame processing
-inherits:
+imports:
   - location: $GEN3_WORKFLOW_DIR/pipelines/_SingleFrame.yaml
-  #- location: $GEN3_WORKFLOW_DIR/pipelines/_SkyCorrection.yaml
+  - location: $GEN3_WORKFLOW_DIR/pipelines/_SkyCorrection.yaml
   - location: $GEN3_WORKFLOW_DIR/pipelines/_ConsolidateVisit.yaml
