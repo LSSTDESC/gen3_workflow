@@ -49,6 +49,7 @@ _RUNNING = 'running'
 _SUCCEEDED = 'succeeded'
 _FAILED = 'failed'
 
+
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
     Run a command line as a parsl.bash_app.
@@ -62,17 +63,33 @@ RUN_COMMANDS = dict(small=small_bash_app(run_command),
                     local=local_bash_app(run_command))
 
 
+def get_resource_spec(job):
+    # Interim default resource specification until a mechanism for
+    # computing job-dependent resource needs is available.
+    return {'memory': 2000, 'cores': 1, 'disk': 0}
+
+
 def get_run_command(job):
     """
     Get the run command appropriate for the required resources for the
     specified job.
     """
     parslConfigBase = job.config['parslConfig'].split('.')[-1]
-    if parslConfigBase.startswith('workQueue'):
-        wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=True,
-                                     ignore_for_cache=['stdout', 'stderr'])
-        return wq_bash_app(run_command)
 
+    if parslConfigBase.startswith('workQueue'):
+        # For the workQueue, use a bash_app that passes the resource
+        # specifications to parsl.
+        resource_spec = get_resource_spec(job)
+
+        def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
+                           parsl_resource_specification=resource_spec):
+            return command_line
+
+        wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=False,
+                                     ignore_for_cache=['stdout', 'stderr'])
+        return wq_bash_app(wq_run_command)
+
+    # Default, ad-hoc resource allocation.
     task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
     if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
                       'forcedPhotCoadd'):
