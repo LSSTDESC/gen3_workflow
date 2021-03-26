@@ -1,5 +1,5 @@
 """
-Parsl config to use a Haswell node on the debug queue.
+Parsl config to use KNL nodes in the regular batch queues.
 """
 from desc.gen3_workflow.bps.wms.parsl.htxFactory import HtxFactory
 import parsl
@@ -25,7 +25,7 @@ batch_large = htx_factory.create(label='batch-large',
                                  mem_per_worker=8,
                                  walltime='40:00:00')
 
-local_executor = ThreadPoolExecutor(max_threads=4, label="submit-node")
+local_executor = ThreadPoolExecutor(max_threads=1, label="submit-node")
 
 config = parsl.config.Config(executors=[batch_small, batch_medium, batch_large,
                                         local_executor],

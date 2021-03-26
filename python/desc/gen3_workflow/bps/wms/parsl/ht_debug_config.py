@@ -25,7 +25,7 @@ batch_large = htx_factory.create(label='batch-large',
                                  mem_per_worker=4,
                                  walltime='0:30:00')
 
-local_executor = ThreadPoolExecutor(max_threads=4, label="submit-node")
+local_executor = ThreadPoolExecutor(max_threads=1, label="submit-node")
 
 config = parsl.config.Config(executors=[batch_small, batch_medium, batch_large,
                                         local_executor],
