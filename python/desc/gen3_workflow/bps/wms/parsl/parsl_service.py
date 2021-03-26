@@ -329,12 +329,14 @@ class ParslGraph(dict):
             data['status'].append(job.status)
         self.df = pd.DataFrame(data=data)
 
-    def get_jobs(self, task_type, query=None):
+    def get_jobs(self, task_type, status=None, query=None):
         """
         Return a list of job names for the specified task applying an
         optional query on the status data frame.
         """
         my_query = f'(task_type == "{task_type}")'
+        if status is not None:
+            my_query += f' and status == "{status}"'
         if query is not None:
             my_query = ' and '.join((my_query, query))
         return list(self.df.query(my_query)['job_name'])
