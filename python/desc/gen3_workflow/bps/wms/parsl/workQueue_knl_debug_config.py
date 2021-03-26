@@ -24,7 +24,7 @@ provider = SlurmProvider('None', walltime='0:30:00',
                          **PROVIDER_OPTIONS)
 
 executors = [WorkQueueExecutor(label='work_queue', port=9000, shared_fs=True,
-                               provider=provider, autolabel=True),
+                               provider=provider, autolabel=False),
              ThreadPoolExecutor(max_threads=1, label='submit-node')]
 config = parsl.config.Config(strategy='simple',
                              garbage_collect=False,
