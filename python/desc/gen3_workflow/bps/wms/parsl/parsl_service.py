@@ -94,6 +94,7 @@ def get_run_command(job):
     specified job.
     """
     parslConfigBase = job.config['parslConfig'].split('.')[-1]
+    task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
 
     if parslConfigBase.startswith('workQueue'):
         # For the workQueue, use a bash_app that passes the resource
@@ -104,12 +105,12 @@ def get_run_command(job):
                            parsl_resource_specification=resource_spec):
             return command_line
 
-        wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=False,
+        wq_run_command.__name__ = task_label
+        wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=True,
                                      ignore_for_cache=['stdout', 'stderr'])
         return wq_bash_app(wq_run_command)
 
     # Default, ad-hoc resource allocation.
-    task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
     if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
                       'forcedPhotCoadd'):
         job_size = 'large'
@@ -243,8 +244,15 @@ class ParslJob:
         Get the parsl app future for the job to be run.
         """
         if self.done:
+            # Return a future from a no-op job, setting the function
+            # name so that the monitoring db can distinguish the
+            # different tasks types.
+            no_op_job.__name__ \
+                = list(self.gwf_job.quantum_graph)[0].taskDef.label + '_no_op'
             self.future = no_op_job()
         if self.future is None:
+            # Schedule the job by running the command line in the
+            # appropriate parsl.bash_app.
             inputs = [_.get_future() for _ in self.prereqs]
             my_run_command = get_run_command(self)
             self.future = my_run_command(self.command_line(), inputs=inputs,
