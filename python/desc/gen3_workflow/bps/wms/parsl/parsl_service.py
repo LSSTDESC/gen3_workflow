@@ -20,7 +20,9 @@ import parsl
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob']
 
 
-def start_pipeline(config_file):
+_PARSL_GRAPH_CONFIG = 'parsl_graph_config.pickle'
+
+def start_pipeline(config_file, outfile=None, mode='symlink'):
     """
     Function to submit a pipeline job using ctrl_bps and the
     Parsl-based plugin.  The returned ParslGraph object provides
@@ -32,13 +34,30 @@ def start_pipeline(config_file):
     ----------
     config_file: str
         ctrl_bps yaml config file.
+    outfile: str [None]
+        Local link or copy of the file containing the as-run configuration
+        for restarting pipelines.  The master copy is written to
+        `{submitPath}/parsl_graph_config.pickle`.
+    mode: str ['symlink']
+        Mode for creating local copy of the file containing the
+        as-run configuration.  If not 'symlink', then make a copy.
 
     Returns
     -------
     ParslGraph
     """
+    if outfile is not None and os.path.isfile(outfile):
+        raise FileExistsError(f"File exists: '{outfile}'")
     config = BpsConfig(config_file, BPS_SEARCH_ORDER)
     workflow = create_submission(config)
+    as_run_config = os.path.join('submit', config['outCollection'],
+                                 _PARSL_GRAPH_CONFIG)
+    workflow.parsl_graph.save_config(as_run_config)
+    if outfile is not None:
+        if mode == 'symlink':
+            os.symlink(as_run_config, outfile)
+        else:
+            shutil.copy(as_run_config, outfile)
     return workflow.parsl_graph
 
 
@@ -393,6 +412,23 @@ class ParslGraph(dict):
     def restore(config_file, parsl_config=None):
         """
         Restore the ParslGraph from a pickled bps config file.
+
+        Parameters
+        ----------
+        config_file: str
+            The filename of the pickle file containing the
+            as-run config from the ParslGraph object.
+        parsl_config: str [None]
+            A parslConfig to supply an alternative configuration
+            for the DataFlowKernel instead of the one in the original
+            bps config yaml file.  For example,
+            'desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4'
+            could be provided to run interactively using the local node's
+            resources.
+
+        Returns
+        -------
+        ParslGraph object
         """
         # Need to have created a DimensionUniverse object to load a
         # pickled QuantumGraph.
@@ -512,4 +548,6 @@ class ParslWorkflow(BaseWmsWorkflow):
         parsl_workflow = cls(generic_workflow.name, config)
         parsl_workflow.parsl_graph = ParslGraph(generic_workflow, config)
         parsl_workflow.submit_path = out_prefix
+        parsl_graph_config = os.path.join(out_prefix, _PARSL_GRAPH_CONFIG)
+        parsl_workflow.parsl_graph.save_config(parsl_graph_config)
         return parsl_workflow
