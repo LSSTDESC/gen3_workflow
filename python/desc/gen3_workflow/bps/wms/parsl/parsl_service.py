@@ -2,6 +2,7 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+import shutil
 from collections import defaultdict
 import pickle
 import subprocess
@@ -81,11 +82,65 @@ RUN_COMMANDS = dict(small=small_bash_app(run_command),
                     large=large_bash_app(run_command),
                     local=local_bash_app(run_command))
 
+class ResourceSpecs:
+    """
+    Class to provide Parsl resource specifications, i.e., required
+    memory, cores, and disk space.
+    """
+    resources = ('memory', 'cores', 'disk')
+    def __init__(self, config):
+        """
+        Parameters
+        ----------
+        config: `lsst.ctrl.bps.BpsConfig`
+            Configuration of the worklow.
+        """
+        resources = self.resources
+        requests = ('requestMemory', 'requestCpus', 'requestDisk')
+        baselines = (4, 1, 0)
+        self.defaults = dict()
+        for resource, request, baseline in zip(resources, requests, baselines):
+            self.defaults[resource] = self.config_get(config, request, baseline)
 
-def get_resource_spec(job):
-    # Interim default resource specification until a mechanism for
-    # computing job-dependent resource needs is available.
-    return {'memory': 2000, 'cores': 1, 'disk': 0}
+        self.configs = defaultdict(dict)
+        for task_type, task_config in config['pipetask'].items():
+            for resource, request in zip(resources, requests):
+                self.configs[resource][task_type] \
+                    = self.config_get(task_config, request,
+                                      self.defaults[resource])
+
+        self.resource_funcs = {_: lambda *args: None for _ in resources}
+
+    @staticmethod
+    def config_get(config, key, default):
+        """
+        Return the specfied default instead of the empty string that
+        BpsConfig objects return for missing keys.
+        """
+        value = config.get(key)
+        if value == '':
+            return default
+        return value
+
+    def resource_value(self, resource, task_type, *args):
+        """
+        Return the resource value for the desired task type.
+        """
+        resource_func = self.resource_funcs[resource]
+        if resource_func() is None:
+            return self.configs[resource].get(task_type,
+                                              self.defaults[resource])
+        return resource_func(task_type, *args)
+
+    def __call__(self, task_type, *args):
+        """
+        Return the parsl resource specification for the desired task.
+        """
+        response = {_: self.resource_value(_, task_type, *args)
+                    for _ in self.resources}
+        response['memory'] *= 1024
+        print("ResourceSpecs.__call__:", task_type, response)
+        return response
 
 
 def get_run_command(job):
@@ -99,7 +154,7 @@ def get_run_command(job):
     if parslConfigBase.startswith('workQueue'):
         # For the workQueue, use a bash_app that passes the resource
         # specifications to parsl.
-        resource_spec = get_resource_spec(job)
+        resource_spec = job.resource_specs(task_label)
 
         def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
                            parsl_resource_specification=resource_spec):
@@ -137,18 +192,19 @@ class ParslJob:
     jobs as futures to the parsl.bash_app that executes the underlying
     quantum graph.
     """
-    def __init__(self, gwf_job, config):
+    def __init__(self, gwf_job, parsl_graph):
         """
         Parameters
         ----------
         gwf_job: `lsst.ctrl.bps.wms.GenericWorkflowJob`
             Workflow job containing execution information for the
             quantum or task to be run.
-        config: `lsst.ctrl.bps.BpsConfig`
-            Configuration object with job info.
+        parsl_graph: ParslGraph
+            ParslGraph object that contains this ParslJob.
         """
         self.gwf_job = gwf_job
-        self.config = config
+        self.config = parsl_graph.config
+        self.resource_specs = parsl_graph.resource_specs
         self.dependencies = set()
         self.prereqs = set()
         self._done = False
@@ -298,6 +354,7 @@ class ParslGraph(dict):
         super().__init__()
         self.gwf = generic_workflow
         self.config = config
+        self.resource_specs = ResourceSpecs(self.config)
         if do_init:
             self._pipetaskInit()
         self._ingest()
@@ -394,7 +451,7 @@ class ParslGraph(dict):
         """
         if not job_name in self:
             gwf_job = self.gwf.get_job(job_name)
-            super().__setitem__(job_name, ParslJob(gwf_job, self.config))
+            super().__setitem__(job_name, ParslJob(gwf_job, self))
         return super().__getitem__(job_name)
 
     def _pipetaskInit(self):
