@@ -87,7 +87,7 @@ class ResourceSpecs:
     Class to provide Parsl resource specifications, i.e., required
     memory, cores, and disk space.
     """
-    resources = ('memory', 'cores', 'disk')
+    resources = ('memory', 'cpus', 'disk')
     def __init__(self, config):
         """
         Parameters
@@ -95,51 +95,33 @@ class ResourceSpecs:
         config: `lsst.ctrl.bps.BpsConfig`
             Configuration of the worklow.
         """
-        resources = self.resources
-        requests = ('requestMemory', 'requestCpus', 'requestDisk')
-        baselines = (4, 1, 0)
-        self.defaults = dict()
-        for resource, request, baseline in zip(resources, requests, baselines):
-            self.defaults[resource] = self.config_get(config, request, baseline)
+        # Place holder set of functions for later implementation
+        # that returns resource needs based on numbers of visits, etc..
+        self.resource_funcs = {_: lambda *args: None for _ in self.resources}
 
-        self.configs = defaultdict(dict)
-        for task_type, task_config in config['pipetask'].items():
-            for resource, request in zip(resources, requests):
-                self.configs[resource][task_type] \
-                    = self.config_get(task_config, request,
-                                      self.defaults[resource])
-
-        self.resource_funcs = {_: lambda *args: None for _ in resources}
-
-    @staticmethod
-    def config_get(config, key, default):
+    def resource_value(self, resource, job, *args):
         """
-        Return the specfied default instead of the empty string that
-        BpsConfig objects return for missing keys.
+        Return the value for the requested resource.
         """
-        value = config.get(key)
-        if value == '':
-            return default
-        return value
+        func = self.resource_funcs[resource]
+        if func() is None:
+            # Return the resource values harvested by ctrl_bps from
+            # the bps config file.
+            return eval(f'job.gwf_job.request_{resource}')
 
-    def resource_value(self, resource, task_type, *args):
-        """
-        Return the resource value for the desired task type.
-        """
-        resource_func = self.resource_funcs[resource]
-        if resource_func() is None:
-            return self.configs[resource].get(task_type,
-                                              self.defaults[resource])
-        return resource_func(task_type, *args)
+        # Compute the resource need for the specific job.
+        task_type = list(job.gwf_job.quantum_graph)[0].taskDef.label
+        return func(task_type, *args)
 
-    def __call__(self, task_type, *args):
+    def __call__(self, job, *args):
         """
         Return the parsl resource specification for the desired task.
         """
-        response = {_: self.resource_value(_, task_type, *args)
+        response = {_: self.resource_value(_, job, *args)
                     for _ in self.resources}
-        response['memory'] *= 1024
-        print("ResourceSpecs.__call__:", task_type, response)
+        # Convert to what Parsl expects:
+        response['memory'] *= 1024  # memory in MB
+        response['cores'] = response.pop('cpus')
         return response
 
 
@@ -154,7 +136,7 @@ def get_run_command(job):
     if parslConfigBase.startswith('workQueue'):
         # For the workQueue, use a bash_app that passes the resource
         # specifications to parsl.
-        resource_spec = job.resource_specs(task_label)
+        resource_spec = job.resource_specs(job)
 
         def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
                            parsl_resource_specification=resource_spec):
