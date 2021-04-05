@@ -101,7 +101,8 @@ class ResourceSpecs:
 
     def resource_value(self, resource, job, *args):
         """
-        Return the value for the requested resource.
+        Return the value for the requested resource. Note that Parsl
+        measures memory in units of MBs.
         """
         func = self.resource_funcs[resource]
         if func() is None:
@@ -119,8 +120,7 @@ class ResourceSpecs:
         """
         response = {_: self.resource_value(_, job, *args)
                     for _ in self.resources}
-        # Convert to what Parsl expects:
-        response['memory'] *= 1024  # memory in MB
+        # Parsl expects 'cores' instead of 'cpus'
         response['cores'] = response.pop('cpus')
         return response
 
