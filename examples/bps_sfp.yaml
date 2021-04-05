@@ -1,0 +1,41 @@
+includeConfigs:
+  - ${GEN3_WORKFLOW_DIR}/examples/bps_drp_baseline.yaml
+
+# Specifiy just single frame processing subsets
+pipelineYaml: ${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml#processCcd,skyCorrection,consolidateVisit
+
+# Resource requests for DC2 Y1 and skymap='DC2' data selection.  For Parsl,
+# memory is in units of MB.
+pipetask:
+  isr:
+    requestMemory: 1600
+  characterizeImage:
+    requestMemory: 900
+  calibrate:
+    requestMemory: 800
+  consolidateVisitSummary:
+    requestMemory: 1000
+  makeWarp:
+    requestMemory: 3500
+  assembleCoadd:
+    requestMemory: 1600
+  detection:
+    requestMemory: 1200
+  mergeDetections:
+    requestMemory: 2000
+  deblend:
+    requestMemory: 5000
+  measure:
+    requestMemory: 1100
+  mergeMeasurements:
+    requestMemory: 2000
+  forcedPhotCoadd:
+    requestMemory: 1100
+
+payload:
+  butlerConfig: ${PWD}/gen3-repo-tiny
+  inCollection: LSSTCam-imSim/defaults
+  outCollection: shared/sfp_test/{timestamp}
+  dataQuery: skymap='DC2' and tract=3828 and patch=24
+
+parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
