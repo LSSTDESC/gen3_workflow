@@ -133,11 +133,12 @@ def get_run_command(job):
     parslConfigBase = job.config['parslConfig'].split('.')[-1]
     task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
 
+    # Get the dictionary of resource specficiations from the job.
+    resource_spec = job.parent_graph.resource_specs(job)
+
     if parslConfigBase.startswith('workQueue'):
         # For the workQueue, use a bash_app that passes the resource
         # specifications to parsl.
-        resource_spec = job.resource_specs(job)
-
         def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
                            parsl_resource_specification=resource_spec):
             return command_line
@@ -147,14 +148,19 @@ def get_run_command(job):
                                      ignore_for_cache=['stdout', 'stderr'])
         return wq_bash_app(wq_run_command)
 
-    # Default, ad-hoc resource allocation.
-    if task_label in ('assembleCoadd', 'detection', 'deblend', 'measure',
-                      'forcedPhotCoadd'):
-        job_size = 'large'
-    elif task_label in ('makeWarp', 'mergeDetections', 'mergeMeasurements'):
-        job_size = 'medium'
-    else:
-        job_size = 'small'
+    # Handle parsl configs with executors for different job_size values.
+    memory_request = resource_spec['memory']/1024.   # convert to GB
+    job_size = 'large'   # Default value
+    try:
+        for key in ('batch-small', 'batch-medium'):
+            mem_per_worker \
+                = job.parent_graph.dfk_module.DFK.executors[key].mem_per_worker
+            if memory_request <= mem_per_worker:
+                job_size = key.split('-')[1]
+                break
+    except AttributeError:
+        # Using executors that don't have mem_per_worker set.
+        pass
     return RUN_COMMANDS[job_size]
 
 
@@ -186,7 +192,7 @@ class ParslJob:
         """
         self.gwf_job = gwf_job
         self.config = parsl_graph.config
-        self.resource_specs = parsl_graph.resource_specs
+        self.parent_graph = parsl_graph
         self.dependencies = set()
         self.prereqs = set()
         self._done = False
@@ -322,7 +328,7 @@ class ParslGraph(dict):
     the generic_worklow DAG.  This class also serves as a container
     for all of the jobs in the DAG.
     """
-    def __init__(self, generic_workflow, config, do_init=True):
+    def __init__(self, generic_workflow, config, do_init=True, dfk_module=None):
         """
         Parameters
         ----------
@@ -332,6 +338,9 @@ class ParslGraph(dict):
             Configuration of the worklow.
         do_init: bool [True]
             Flag to run pipetaskInit.
+        dfk_module: module [None]
+            The Parsl python module containing the DataFlowKernel that is
+            nominally created from `config['parslConfig']`.
         """
         super().__init__()
         self.gwf = generic_workflow
@@ -339,6 +348,7 @@ class ParslGraph(dict):
         self.resource_specs = ResourceSpecs(self.config)
         if do_init:
             self._pipetaskInit()
+        self.dfk_module = dfk_module
         self._ingest()
         self._update_status()
 
@@ -448,7 +458,7 @@ class ParslGraph(dict):
     @staticmethod
     def import_parsl_config(parsl_config):
         """Import the parsl config module."""
-        lsst.utils.doImport(parsl_config)
+        return lsst.utils.doImport(parsl_config)
 
     def save_config(self, config_file):
         """Save the bps config as a pickle file."""
@@ -486,12 +496,13 @@ class ParslGraph(dict):
                                        'bps_generic_workflow.pickle')
         with open(gwf_pickle_file, 'rb') as fd:
             generic_workflow = pickle.load(fd)
+
         if parsl_config is not None:
-            ParslGraph.import_parsl_config(parsl_config)
             config['parslConfig'] = parsl_config
-        else:
-            ParslGraph.import_parsl_config(config['parslConfig'])
-        return ParslGraph(generic_workflow, config, do_init=False)
+        dfk_module = ParslGraph.import_parsl_config(config['parslConfig'])
+
+        return ParslGraph(generic_workflow, config, do_init=False,
+                          dfk_module=dfk_module)
 
     def run(self, jobs=None, block=False):
         """
@@ -532,16 +543,18 @@ class ParslService(BaseWmsService):
         -------
         ParslWorkflow
         """
-        # Import the Parsl runtime config.
-        try:
-            lsst.utils.doImport(config['parslConfig'])
-        except RuntimeError:
-            pass
-
         service_class = 'desc.gen3_workflow.bps.wms.parsl.ParslService'
         workflow = ParslWorkflow.\
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
+
+        # Import the Parsl runtime config.
+        try:
+            workflow.parsl_graph.dfk_module \
+                = lsst.utils.doImport(config['parslConfig'])
+        except RuntimeError:
+            pass
+
 
         return workflow
 
