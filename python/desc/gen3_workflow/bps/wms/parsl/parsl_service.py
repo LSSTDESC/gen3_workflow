@@ -231,7 +231,7 @@ class ParslJob:
     @property
     def done(self):
         """
-        Execution state of the job based whether the job has
+        Execution state of the job based on whether the job has
         written the 'success' string to the end of its log file.
         """
         if not self._done:
@@ -242,10 +242,6 @@ class ParslJob:
     def status(self):
         """Return the job status, either _PENDING, _SCHEDULED, _RUNNING,
         _SUCCEEDED, or _FAILED."""
-        if not hasattr(self, '_status'):
-            # handle older pickled ParslGraphs
-            self._status = _PENDING
-
         if self._status in (_SUCCEEDED, _FAILED):
             return self._status
 
@@ -554,7 +550,6 @@ class ParslService(BaseWmsService):
                 = lsst.utils.doImport(config['parslConfig'])
         except RuntimeError:
             pass
-
 
         return workflow
 
