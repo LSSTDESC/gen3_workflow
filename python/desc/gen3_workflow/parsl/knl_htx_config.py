@@ -1,7 +1,7 @@
 """
 Parsl config to use KNL nodes in the regular batch queues.
 """
-from desc.gen3_workflow.bps.wms.parsl.htxFactory import HtxFactory
+from desc.gen3_workflow.parsl.htxFactory import HtxFactory
 import parsl
 from parsl.executors.threads import ThreadPoolExecutor
 

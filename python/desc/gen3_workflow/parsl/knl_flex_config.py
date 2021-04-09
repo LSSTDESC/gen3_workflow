@@ -1,8 +1,7 @@
 """
 Parsl config to use KNL nodes on in the flex queue.
 """
-from desc.gen3_workflow.bps.wms.parsl.htxFactory import HtxFactory, \
-    PROVIDER_OPTIONS
+from desc.gen3_workflow.parsl.htxFactory import HtxFactory, PROVIDER_OPTIONS
 import parsl
 from parsl.executors.threads import ThreadPoolExecutor
 

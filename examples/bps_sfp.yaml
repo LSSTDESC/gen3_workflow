@@ -38,4 +38,4 @@ payload:
   outCollection: shared/sfp_test/{timestamp}
   dataQuery: skymap='DC2' and tract=3828 and patch=24
 
-parslConfig: desc.gen3_workflow.bps.wms.parsl.threaded_pool_config_4
+parslConfig: desc.gen3_workflow.parsl.thread_pool_config_4
