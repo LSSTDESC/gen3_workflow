@@ -28,10 +28,10 @@ payload:
   outCollection: shared/parsl_patch_test_{timestamp}
   dataQuery: tract=3828 AND patch=24 AND skymap='DC2'
 
-parslConfig: desc.gen3_workflow.parsl.thread_pool_config_4
-#parslConfig: desc.gen3_workflow.parsl.thread_pool_config_32
-#parslConfig: desc.gen3_workflow.parsl.ht_debug_config
-#parslConfig: desc.gen3_workflow.parsl.knl_htx_config
+parslConfig: desc.gen3_workflow.config.thread_pool_config_4
+#parslConfig: desc.gen3_workflow.config.thread_pool_config_32
+#parslConfig: desc.gen3_workflow.config.ht_debug_config
+#parslConfig: desc.gen3_workflow.config.knl_htx_config
 ```
 * `butlerConfig` should point to your Gen3 repo.
 * `inCollection` is the list of input collections.
@@ -51,7 +51,7 @@ Note that parsl requires a running python instance, so the `bps submit` command 
 ### Running a Pipeline from the Python prompt
 Since Parsl requires an active python instance, running pipelines usually works better doing so from a python prompt.  There's a helper function to enable that:
 ```
->>> from desc.gen3_workflow.parsl import start_pipeline
+>>> from desc.gen3_workflow import start_pipeline
 
 >>> graph = start_pipeline('bps_DRP.yaml')
 INFO  2021-02-10T05:13:25.047Z ctrl.mpexec.cmdLineFwk ()(cmdLineFwk.py:528)- QuantumGraph contains 29 quanta for 13 tasks, graph ID: '1612933997.1458979-461'
@@ -133,7 +133,7 @@ This can be done at any time while the pipeline is running, but it's useful to d
 
 The `ParslGraph` associated with that pickled config can restored in a new python session:
 ```
->>> from desc.gen3_workflow.parsl import ParslGraph
+>>> from desc.gen3_workflow import ParslGraph
 >>> graph = ParslGraph.restore('drp_3828_24_192355.pickle')
 ```
 Since the pipeline state is saved on disk in the registry database, in the associate `ctrl_bps` files in the `submit` folder, and in the log file output, the status of the restored graph will reflect the state of the pipeline as it was encoded in those locations when the python session ended:

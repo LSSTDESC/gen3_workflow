@@ -1,7 +1,7 @@
 """
 Parsl config to use a Haswell node on the debug queue.
 """
-from desc.gen3_workflow.parsl.htxFactory import HtxFactory
+from desc.gen3_workflow.config.htxFactory import HtxFactory
 import parsl
 from parsl.executors.threads import ThreadPoolExecutor
 

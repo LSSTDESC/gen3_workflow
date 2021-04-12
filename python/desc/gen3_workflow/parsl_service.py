@@ -13,7 +13,7 @@ from lsst.daf.butler import Butler
 from lsst.ctrl.bps import BpsConfig
 from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
-from desc.gen3_workflow.parsl.bash_apps import \
+from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
 
@@ -475,7 +475,7 @@ class ParslGraph(dict):
             A parslConfig to supply an alternative configuration
             for the DataFlowKernel instead of the one in the original
             bps config yaml file.  For example,
-            'desc.gen3_workflow.parsl.thread_pool_config_4'
+            'desc.gen3_workflow.config.thread_pool_config_4'
             could be provided to run interactively using the local node's
             resources.
 
@@ -539,7 +539,7 @@ class ParslService(BaseWmsService):
         -------
         ParslWorkflow
         """
-        service_class = 'desc.gen3_workflow.parsl.ParslService'
+        service_class = 'desc.gen3_workflow.ParslService'
         workflow = ParslWorkflow.\
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
@@ -559,7 +559,7 @@ class ParslService(BaseWmsService):
 
         Parameters
         ----------
-        workflow: `desc.gen3_workflow.parsl.parsl_service.ParslWorkflow`
+        workflow: `desc.gen3_workflow.ParslWorkflow`
             Workflow object to execute.
         """
         workflow.parsl_graph.run(block=True)
