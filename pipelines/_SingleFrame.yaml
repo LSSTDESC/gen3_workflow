@@ -5,6 +5,8 @@ tasks:
     class: lsst.ip.isr.IsrTask
     config:
       doBrighterFatter: False
+      #doBrighterFatter: True
+      connections.newBFKernel: bfk
   characterizeImage: lsst.pipe.tasks.characterizeImage.CharacterizeImageTask
   calibrate:
     class: lsst.pipe.tasks.calibrate.CalibrateTask
