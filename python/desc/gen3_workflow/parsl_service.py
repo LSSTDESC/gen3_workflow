@@ -111,7 +111,7 @@ class ResourceSpecs:
             return eval(f'job.gwf_job.request_{resource}')
 
         # Compute the resource need for the specific job.
-        task_type = list(job.gwf_job.quantum_graph)[0].taskDef.label
+        task_type = job.gwf_job.label
         return func(task_type, *args)
 
     def __call__(self, job, *args):
@@ -131,7 +131,7 @@ def get_run_command(job):
     specified job.
     """
     parslConfigBase = job.config['parslConfig'].split('.')[-1]
-    task_label = list(job.gwf_job.quantum_graph)[0].taskDef.label
+    task_label = job.gwf_job.label
 
     # Get the dictionary of resource specficiations from the job.
     resource_spec = job.parent_graph.resource_specs(job)
@@ -287,8 +287,7 @@ class ParslJob:
             # Return a future from a no-op job, setting the function
             # name so that the monitoring db can distinguish the
             # different tasks types.
-            no_op_job.__name__ \
-                = list(self.gwf_job.quantum_graph)[0].taskDef.label + '_no_op'
+            no_op_job.__name__ = self.gwf_job.label + '_no_op'
             self.future = no_op_job()
         if self.future is None:
             # Schedule the job by running the command line in the
@@ -362,7 +361,7 @@ class ParslGraph(dict):
 
             # Extract the numbers of visits per patch from the
             # `assembleCoadd` tasks.
-            if 'assembleCoadd' in job.label:
+            if 'assembleCoadd' in job.label and job.quantum_graph is not None:
                 warps = (list(job.quantum_graph)[0]
                          .quantum.inputs['deepCoadd_directWarp'])
                 tract_patch = warps[0].dataId['tract'], warps[0].dataId['patch']
