@@ -2,6 +2,7 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+import glob
 import shutil
 from collections import defaultdict
 import pickle
@@ -9,10 +10,11 @@ import subprocess
 import pandas as pd
 import lsst.utils
 import lsst.daf.butler
-from lsst.daf.butler import Butler
+from lsst.daf.butler import Butler, DimensionUniverse
 from lsst.ctrl.bps import BpsConfig
 from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
+from lsst.pipe.base.graph import QuantumGraph
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 import parsl
@@ -306,7 +308,7 @@ class ParslJob:
         butler = Butler(self.config['butlerConfig'],
                         run=self.config['outCollection'])
         registry = butler.registry
-        for node in self.gwf_job.quantum_graph:
+        for node in self.qgraph_nodes:
             for dataset_refs in node.quantum.outputs.values():
                 for dataset_ref in dataset_refs:
                     ref = registry.findDataset(dataset_ref.datasetType,
@@ -315,6 +317,14 @@ class ParslJob:
                     if ref is None:
                         return False
         return True
+
+    @property
+    def qgraph_nodes(self):
+        if self.gwf_job.quantum_graph is not None:
+            return self.gwf_job.quantum_graph
+        qgraph = self.parent_graph.qgraph
+        return [qgraph.getQuantumNodeByNodeId(_)
+                for _ in self.gwf_job.qgraph_node_ids]
 
 
 class ParslGraph(dict):
@@ -345,6 +355,7 @@ class ParslGraph(dict):
             self._pipetaskInit()
         self.dfk_module = dfk_module
         self._ingest()
+        self._qgraph = None
         self._update_status()
 
     def _ingest(self):
@@ -399,6 +410,14 @@ class ParslGraph(dict):
             data['job_name'].append(job_name)
             data['status'].append(job.status)
         self.df = pd.DataFrame(data=data)
+
+    @property
+    def qgraph(self):
+        if self._qgraph is None:
+            qgraph_file = glob.glob(os.path.join(self.config['submitPath'],
+                                                 '*.qgraph'))[0]
+            self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+        return self._qgraph
 
     def get_jobs(self, task_type, status='pending', query=None):
         """
