@@ -1,0 +1,42 @@
+pipetask:
+  isr:
+    requestMemory: 2700
+  characterizeImage:
+    requestMemory: 900
+  calibrate:
+    requestMemory: 900
+#  writeSourceTable:
+#  transformSouceTable:
+#  consolidateSourceTable:
+  consolidateVisitSummary:
+    requestMemory: 1000
+#  selectGoodSeeingVisits:
+  templateGen:
+    requestMemory: 700
+  imageDifference:
+    requestMemory: 2900
+  forcedPhotDiffim:
+    requestMemory: 700
+  skyCorrectionTask:
+    requestMemory: 1800
+  makeWarp:
+    requestMemory: 2000
+  assembleCoadd:
+    requestMemory: 1000
+  detection:
+    requestMemory: 700
+  mergeDetections:
+    requestMemory: 2000
+  deblend:
+    requestMemory: 3000
+  measure:
+    requestMemory: 1500
+  mergeMeasurements:
+    requestMemory: 2000
+  forcedPhotCoadd:
+    requestMemory: 1000
+  forcedPhotCcd:
+    requestMemory: 800
+#  writeObjectTable:
+#  transformObjectTable:
+#  consolidateVisitTable:
