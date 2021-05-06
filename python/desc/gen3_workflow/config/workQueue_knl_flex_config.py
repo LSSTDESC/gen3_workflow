@@ -18,11 +18,12 @@ PROVIDER_OPTIONS = dict(nodes_per_block=1,
                         cmd_timeout=300)
 
 SCHEDULER_OPTIONS = ("#SBATCH --constraint=knl\n"
-                     "#SBATCH --qos=debug\n"
+                     "#SBATCH --qos=flex\n"
                      "#SBATCH --module=cvmfs\n"
-                     "#SBATCH -L cvmfs")
+                     "#SBATCH -L cvmfs\n"
+                     "#SBATCH --time-min 2:00:00")
 
-provider = SlurmProvider('None', walltime='0:30:00',
+provider = SlurmProvider('None', walltime='10:00:00',
                          scheduler_options=SCHEDULER_OPTIONS,
                          **PROVIDER_OPTIONS)
 
