@@ -157,11 +157,16 @@ def get_run_command(job):
         for key in ('batch-small', 'batch-medium'):
             mem_per_worker \
                 = job.parent_graph.dfk_module.DFK.executors[key].mem_per_worker
+            if mem_per_worker is None:
+                # mem_per_worker is not set for this executor (and
+                # presumably also not for all of the others), so just
+                # use the default job_size.
+                break
             if memory_request <= mem_per_worker:
                 job_size = key.split('-')[1]
                 break
     except AttributeError:
-        # Using executors that don't have mem_per_worker set.
+        # Using executors that don't have a mem_per_worker attribute.
         pass
     return RUN_COMMANDS[job_size]
 
