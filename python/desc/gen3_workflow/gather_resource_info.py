@@ -48,7 +48,8 @@ def parse_metadata_yaml(yaml_file):
     return results
 
 
-def gather_resource_info(butler, dataId, collections=None, verbose=False):
+def gather_resource_info(butler, dataId, collections=None, verbose=False,
+                         datatype_pattern='.*_metadata'):
     """
     Gather the per-task resource usage information from the
     `<task>_metadata` datasets.
@@ -56,7 +57,7 @@ def gather_resource_info(butler, dataId, collections=None, verbose=False):
     columns = ('detector', 'tract', 'patch', 'band', 'visit')
     registry = butler.registry
     data = defaultdict(list)
-    pattern = re.compile('.*_metadata')
+    pattern = re.compile(datatype_pattern)
     datarefs = registry.queryDatasets(pattern, dataId=dataId, findFirst=True,
                                       collections=collections)
     if verbose:
