@@ -1,0 +1,27 @@
+includeConfigs:
+  - ${GEN3_WORKFLOW_DIR}/examples/bps_drp_baseline.yaml
+  - ${GEN3_WORKFLOW_DIR}/examples/bps_DC2-3828-y1_resources.yaml
+
+operator: jchiang
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
+templateDataId: "{tract}_{patch}_{band}_{visit}_{detector}"
+submitPath: ${PWD}/submit/{outCollection}
+
+payload:
+  butlerConfig: ${PWD}/gen3-3828-y1
+  inCollection: LSSTCam-imSim/defaults
+  outCollection: shared/drp_0_15500/{timestamp}
+  dataQuery: "skymap='DC2-discrete' and tract=0 and patch=15500"
+
+parsl_config:
+  retries: 1
+  executor: WorkQueue
+#  provider: Slurm
+#  nodes_per_block: 1
+#  constraint: knl
+#  worker_options: "--memory=91000"
+#  qos: flex
+#  time_min: "02:00:00"
+  provider: Local
+  monitoring: true
+  worker_options: "--memory=8000"
