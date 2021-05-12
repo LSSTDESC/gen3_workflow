@@ -51,7 +51,7 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
 
 def workqueue_config(provider, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     log_level=logging.INFO):
+                     log_level=logging.DEBUG):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
     logger = logging.getLogger("parsl.executors.workqueue.executor")
     logger.setLevel(log_level)
@@ -122,12 +122,18 @@ def load_parsl_config(bps_config):
             workflow_name = config['workflow_name']
         else:
             workflow_name = bps_config['outCollection']
+        log_level = config['log_level']
+        if not log_level:
+            log_level = logging.DEBUG
+        else:
+            log_level = eval(log_level)
         return workqueue_config(provider,
                                 monitoring=config['monitoring'],
                                 workflow_name=workflow_name,
                                 checkpoint=config['checkpoint'],
                                 retries=retries,
-                                worker_options=config['worker_options'])
+                                worker_options=config['worker_options'],
+                                log_level=log_level)
 
     raise RuntimeError("Unknown or unspecified executor in "
                        f"bps config: {config['executor']}")
