@@ -51,7 +51,7 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
 
 def workqueue_config(provider, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     log_level=logging.DEBUG):
+                     log_level=logging.DEBUG, wq_max_retries=1):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
     logger = logging.getLogger("parsl.executors.workqueue.executor")
     logger.setLevel(log_level)
@@ -59,7 +59,8 @@ def workqueue_config(provider, monitoring=False, workflow_name=None,
     executors = [WorkQueueExecutor(label='work_queue', port=9000,
                                    shared_fs=True, provider=provider,
                                    worker_options=worker_options,
-                                   autolabel=False),
+                                   autolabel=False,
+                                   max_retries=wq_max_retries),
                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
 
     config_options = {'retries': retries}
@@ -127,13 +128,21 @@ def load_parsl_config(bps_config):
             log_level = logging.DEBUG
         else:
             log_level = eval(log_level)
+        wq_max_retries = config['wq_max_retries']
+        if wq_max_retries == 'None':
+            wq_max_retries = None
+        elif wq_max_retries == '':
+            wq_max_retries = 1
+        else:
+            wq_max_retries = int(wq_max_retries)
         return workqueue_config(provider,
                                 monitoring=config['monitoring'],
                                 workflow_name=workflow_name,
                                 checkpoint=config['checkpoint'],
                                 retries=retries,
                                 worker_options=config['worker_options'],
-                                log_level=log_level)
+                                log_level=log_level,
+                                wq_max_retries=wq_max_retries)
 
     raise RuntimeError("Unknown or unspecified executor in "
                        f"bps config: {config['executor']}")
