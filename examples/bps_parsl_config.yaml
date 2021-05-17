@@ -1,0 +1,31 @@
+# WorkQueueExecutor configuration using a LocalProvider, i.e., running
+# on the submit node.
+parsl_config:
+  retries: 1
+  executor: WorkQueue
+  provider: Local
+  monitoring: false
+  checkpoint: false
+
+## WorkQueueExecutor using a SlurmProvider for running at NERSC.
+#parsl_config:
+#  provider: Slurm
+#  nodes_per_block: 1
+#  constraint: knl
+#  worker_options: "--memory=91000"
+##  constraint: haswell
+##  worker_options: "--memory=123000"
+#  qos: regular
+#  walltime: '10:00:00'
+##  qos: debug
+##  walltime: '00:30:00'
+##  qos: flex
+##  time_min: '02:00:00'
+#  monitoring: true
+#  workflow_name: my_workflow
+#  checkpoint: false
+
+## ThreadPoolExecutor with 4 threads.
+#parsl_config:
+#  executor: ThreadPool
+#  max_threads: 4

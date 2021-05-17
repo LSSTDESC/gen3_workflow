@@ -7,8 +7,6 @@ submitPath: ${PWD}/submit/{outCollection}
 requestMemory: 2000
 requestCpus: 1
 
-# Make sure these values correspond to ones in the bin/run_demo.sh's
-# pipetask command line.
 payload:
   runInit: true
   payloadName: DC2_dataset
@@ -27,12 +25,15 @@ parslConfig: desc.gen3_workflow.config.workQueue_local_config
 #parslConfig: desc.gen3_workflow.config.thread_pool_config_4
 #parslConfig: desc.gen3_workflow.config.thread_pool_config_32
 
-commandPrepend: time
-#commandPrepend: shifter -E --image=lsstsqre/centos:7-stack-lsst_distrib-w_2021_08 ${GEN3_WORKFLOW_DIR}/scripts/cl_wrapper.sh
+commandPrepend: ">& echo `date -Iseconds -u`; time"
+
+#shifter_id: lsstsqre/centos:7-stack-lsst_distrib-w_2021_18
+#commandPrepend: ">& echo `date -Iseconds -u`; shifter -E --image={shifter_id} ${GEN3_WORKFLOW_DIR}/scripts/cl_wrapper.sh"
 
 wmsServiceClass: desc.gen3_workflow.ParslService
+whenSaveJobQgraph: "NEVER"
 bpsUseShared: true
 
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
 createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument lsst.obs.lsst.LsstCamImSim -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
-runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-partial-outputs"
+runQuantumCommand: "pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-partial-outputs --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId}"

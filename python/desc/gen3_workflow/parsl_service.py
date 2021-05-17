@@ -15,15 +15,17 @@ from lsst.ctrl.bps import BpsConfig
 from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph
+import parsl
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
-import parsl
+from desc.gen3_workflow.config import load_parsl_config
 
 
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob', 'ParslService']
 
 
 _PARSL_GRAPH_CONFIG = 'parsl_graph_config.pickle'
+
 
 def start_pipeline(config_file, outfile=None, mode='symlink'):
     """
@@ -55,6 +57,7 @@ def start_pipeline(config_file, outfile=None, mode='symlink'):
     workflow = create_submission(config)
     as_run_config = os.path.join('submit', config['outCollection'],
                                  _PARSL_GRAPH_CONFIG)
+    workflow.parsl_graph.dfk = load_parsl_config(config)
     workflow.parsl_graph.save_config(as_run_config)
     if outfile is not None:
         if mode == 'symlink':
@@ -132,13 +135,12 @@ def get_run_command(job):
     Get the run command appropriate for the required resources for the
     specified job.
     """
-    parslConfigBase = job.config['parslConfig'].split('.')[-1]
     task_label = job.gwf_job.label
 
     # Get the dictionary of resource specficiations from the job.
     resource_spec = job.parent_graph.resource_specs(job)
 
-    if parslConfigBase.startswith('workQueue'):
+    if 'work_queue' in job.parent_graph.dfk.executors:
         # For the workQueue, use a bash_app that passes the resource
         # specifications to parsl.
         def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
@@ -155,8 +157,7 @@ def get_run_command(job):
     job_size = 'large'   # Default value
     try:
         for key in ('batch-small', 'batch-medium'):
-            mem_per_worker \
-                = job.parent_graph.dfk_module.DFK.executors[key].mem_per_worker
+            mem_per_worker = job.parent_graph.dfk.executors[key].mem_per_worker
             if mem_per_worker is None:
                 # mem_per_worker is not set for this executor (and
                 # presumably also not for all of the others), so just
@@ -325,6 +326,7 @@ class ParslJob:
 
     @property
     def qgraph_nodes(self):
+        """Return the list of nodes from the underlying QuantumGraph."""
         if self.gwf_job.quantum_graph is not None:
             return self.gwf_job.quantum_graph
         qgraph = self.parent_graph.qgraph
@@ -338,7 +340,7 @@ class ParslGraph(dict):
     the generic_worklow DAG.  This class also serves as a container
     for all of the jobs in the DAG.
     """
-    def __init__(self, generic_workflow, config, do_init=True, dfk_module=None):
+    def __init__(self, generic_workflow, config, do_init=True, dfk=None):
         """
         Parameters
         ----------
@@ -348,9 +350,9 @@ class ParslGraph(dict):
             Configuration of the worklow.
         do_init: bool [True]
             Flag to run pipetaskInit.
-        dfk_module: module [None]
-            The Parsl python module containing the DataFlowKernel that is
-            nominally created from `config['parslConfig']`.
+        dfk: parsl.DataFlowKernel [None]
+            The parsl DataFlowKernel that is nominally created from
+             `config['parsl_config']`.
         """
         super().__init__()
         self.gwf = generic_workflow
@@ -358,7 +360,7 @@ class ParslGraph(dict):
         self.resource_specs = ResourceSpecs(self.config)
         if do_init:
             self._pipetaskInit()
-        self.dfk_module = dfk_module
+        self.dfk = dfk
         self._ingest()
         self._qgraph = None
         self._update_status()
@@ -418,6 +420,7 @@ class ParslGraph(dict):
 
     @property
     def qgraph(self):
+        """The QuantumGraph associated with the current bps job."""
         if self._qgraph is None:
             qgraph_file = glob.glob(os.path.join(self.config['submitPath'],
                                                  '*.qgraph'))[0]
@@ -517,11 +520,15 @@ class ParslGraph(dict):
             generic_workflow = pickle.load(fd)
 
         if parsl_config is not None:
-            config['parslConfig'] = parsl_config
-        dfk_module = ParslGraph.import_parsl_config(config['parslConfig'])
+            if os.path.isfile(parsl_config):
+                my_config = BpsConfig(parsl_config, BPS_SEARCH_ORDER)
+                config['parsl_config'] = my_config['parsl_config']
+            else:
+                config['parslConfig'] = parsl_config
 
-        return ParslGraph(generic_workflow, config, do_init=False,
-                          dfk_module=dfk_module)
+        dfk = load_parsl_config(config)
+
+        return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
     def run(self, jobs=None, block=False):
         """
@@ -567,13 +574,6 @@ class ParslService(BaseWmsService):
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
 
-        # Import the Parsl runtime config.
-        try:
-            workflow.parsl_graph.dfk_module \
-                = lsst.utils.doImport(config['parslConfig'])
-        except RuntimeError:
-            pass
-
         return workflow
 
     def submit(self, workflow):
@@ -585,7 +585,24 @@ class ParslService(BaseWmsService):
         workflow: `desc.gen3_workflow.ParslWorkflow`
             Workflow object to execute.
         """
+        # Import the parsl config and set the DataFlowKernel attribute.
+        workflow.parsl_graph.dfk \
+            = load_parsl_config(workflow.parsl_graph.config)
+
         workflow.parsl_graph.run(block=True)
+
+    def cancel(self, wms_id, pass_thru=None):
+        """Not implemented"""
+        raise NotImplementedError
+
+    def list_submitted_jobs(self, wms_id=None, user=None, require_bps=True,
+                            pass_thru=None):
+        """Not implemented"""
+        raise NotImplementedError
+
+    def report(self, wms_workflow_id=None, user=None, hist=0, pass_thru=None):
+        """Not implemented"""
+        raise NotImplementedError
 
 
 class ParslWorkflow(BaseWmsWorkflow):
@@ -629,3 +646,7 @@ class ParslWorkflow(BaseWmsWorkflow):
         parsl_graph_config = os.path.join(out_prefix, _PARSL_GRAPH_CONFIG)
         parsl_workflow.parsl_graph.save_config(parsl_graph_config)
         return parsl_workflow
+
+    def write(self, out_prefix):
+        """Not implemented"""
+        raise NotImplementedError
