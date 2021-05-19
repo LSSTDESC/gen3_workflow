@@ -1,17 +1,13 @@
 """
 Code to gather resource usage information from per-task metadata.
 """
-import os
 import sys
 import re
-import glob
-import time
 from collections import defaultdict
+import multiprocessing
 import yaml
 import numpy as np
 import pandas as pd
-from lsst.daf.butler import Butler
-from lsst.daf.base import PropertyList, PropertySet
 
 
 __all__ = ['parse_metadata_yaml', 'gather_resource_info', 'add_num_visits']
@@ -48,32 +44,20 @@ def parse_metadata_yaml(yaml_file):
     return results
 
 
-def gather_resource_info(butler, dataId, collections=None, verbose=False,
-                         datatype_pattern='.*_metadata'):
+def process_datarefs(datarefs, collections, butler, verbose=True):
     """
-    Gather the per-task resource usage information from the
-    `<task>_metadata` datasets.
+    Process a list of datarefs, extracting the per-task resource usage
+    info from the `*_metadata` yaml files.
     """
     columns = ('detector', 'tract', 'patch', 'band', 'visit')
-    registry = butler.registry
     data = defaultdict(list)
-    pattern = re.compile(datatype_pattern)
-    datarefs = registry.queryDatasets(pattern, dataId=dataId, findFirst=True,
-                                      collections=collections)
-    if verbose:
-        print(f'found {len(list(datarefs))} datarefs')
-    yaml_files = set()
-    nrefs = len(list(datarefs))
+    nrefs = len(datarefs)
     for i, dataref in enumerate(datarefs):
         if verbose:
             if i % (nrefs//20) == 0:
                 sys.stdout.write('.')
                 sys.stdout.flush()
         yaml_file = butler.getURI(dataref, collections=collections).path
-        if yaml_file not in yaml_files:
-            yaml_files.add(yaml_file)
-        else:
-            continue
         data['task'].append(dataref.datasetType.name[:-len('_metadata')])
         dataId = dict(dataref.dataId)
         if 'visit' not in dataId and 'exposure' in dataId:
@@ -83,10 +67,47 @@ def gather_resource_info(butler, dataId, collections=None, verbose=False,
         results = parse_metadata_yaml(yaml_file)
         data['cpu_time'].append(results.get('EndCpuTime', None))
         data['maxRSS'].append(results.get('MaxResidentSetSize', None))
-    if verbose:
-        print()
-
     return pd.DataFrame(data=data)
+
+
+def gather_resource_info(butler, dataId, collections=None, verbose=False,
+                         datatype_pattern='.*_metadata', nmax=None,
+                         processes=1):
+    """
+    Gather the per-task resource usage information from the
+    `<task>_metadata` datasets.
+    """
+    registry = butler.registry
+    pattern = re.compile(datatype_pattern)
+    datarefs = list(registry.queryDatasets(pattern, dataId=dataId,
+                                           findFirst=True,
+                                           collections=collections))
+    nrefs = len(datarefs)
+    if verbose:
+        print(f'found {nrefs} datarefs')
+    nmax = nrefs if nmax is None else min(nrefs, nmax)
+
+    if processes <= 1:
+        return process_datarefs(datarefs, collections, butler, verbose=verbose)
+
+    # Shuffle datarefs to help ensure the work is the same across
+    # processes.
+    np.random.shuffle(datarefs)
+    datarefs = datarefs[:nmax]
+
+    indexes = [int(_) for _ in np.linspace(0, nmax + 1, processes + 1)]
+
+    with multiprocessing.Pool(processes=processes) as pool:
+        futures = []
+        for imin, imax in zip(indexes[:-1], indexes[1:]):
+            verbose = verbose and (imin == indexes[0])
+            args = datarefs[imin:imax], collections, butler, verbose
+            futures.append(pool.apply_async(process_datarefs, args))
+        pool.close()
+        pool.join()
+        dfs = [_.get() for _ in futures]
+    df = pd.concat(dfs)
+    return df
 
 
 def add_num_visits(df, num_visits):
