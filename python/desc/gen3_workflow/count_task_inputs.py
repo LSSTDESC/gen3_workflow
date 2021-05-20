@@ -13,7 +13,7 @@ __all__ = ['count_task_inputs']
 
 
 def count_task_inputs(qgraph_file, task_label='assembleCoadd',
-                      input_name='deepCoadd_directWarp'):
+                      input_type='deepCoadd_directWarp'):
     """
     Return a dataframe with the numbers input datasets of specified
     dataset types going into the output data products of the specified
@@ -26,7 +26,7 @@ def count_task_inputs(qgraph_file, task_label='assembleCoadd',
     task_label: str ['assembleCoadd']
         Label of the task from the pipeline yaml file.  Appropriate
         labels include 'assembleCoadd', 'templateGen', 'makeWarp'.
-    input_name: str ['deepCoadd_directWarp']
+    input_type: str ['deepCoadd_directWarp']
         Dataset type name for the inputs to consider.  Appropriate
         dataset types include 'deepCoadd_directWarp', 'calexp'.
 
@@ -43,7 +43,7 @@ def count_task_inputs(qgraph_file, task_label='assembleCoadd',
             for dim in dataId:
                 data[dim].append(dataId[dim])
             for dstype, dsrefs in node.quantum.inputs.items():
-                if dstype.name == input_name:
-                    data[f'num_{input_name}'] = len(dsrefs)
+                if dstype.name == input_type:
+                    data[f'num_{input_type}'].append(len(dsrefs))
                     break
     return pd.DataFrame(data=data)
