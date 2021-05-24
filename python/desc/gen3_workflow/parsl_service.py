@@ -367,7 +367,6 @@ class ParslGraph(dict):
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
-        self.num_visits = defaultdict(dict)
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
@@ -376,15 +375,6 @@ class ParslGraph(dict):
             # ingested into the ParslGraph.
             _ = self[job_name]
             job = self.gwf.get_job(job_name)
-
-            # Extract the numbers of visits per patch from the
-            # `assembleCoadd` tasks.
-            if 'assembleCoadd' in job.label and job.quantum_graph is not None:
-                warps = (list(job.quantum_graph)[0]
-                         .quantum.inputs['deepCoadd_directWarp'])
-                tract_patch = warps[0].dataId['tract'], warps[0].dataId['patch']
-                band = warps[0].dataId['band']
-                self.num_visits[tract_patch][band] = len(warps)
 
             for successor_job in self.gwf.successors(job_name):
                 self[job_name].add_dependency(self[successor_job])
