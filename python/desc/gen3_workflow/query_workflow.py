@@ -25,6 +25,13 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
     status of each task.  Use the task.task_stderr as the unique
     identifier of each task.
     """
+    if not os.path.isfile(db_file):
+        raise FileNotFoundError(db_file)
+    with sqlite3.connect(db_file) as conn:
+        df = pd.read_sql('select * from workflow where '
+                         f'workflow_name="{workflow_name}"', conn)
+        if df.empty:
+            raise FileNotFoundError(f'workflow {workflow_name} not in {db_file}')
     query = f'''select task.task_stderr, status.task_status_name,
                 status.timestamp
                 from task join status on task.task_id=status.task_id and
