@@ -9,7 +9,14 @@ import numpy as np
 import pandas as pd
 
 
-__all__ = ['query_workflow', 'print_status']
+__all__ = ['query_workflow', 'print_status', 'DRP_TASKS']
+
+
+DRP_TASKS = tuple('isr characterizeImage calibrate skyCorrectionTask '
+                  'consolidateVisitSummary makeWarp selectGoodSeeingVisits '
+                  'assembleCoadd templateGen detection imageDifference '
+                  'mergeDetections deblend measure mergeMeasurements '
+                  'forcedPhotCoadd forcedPhotCcd forcedPhotDiffim'.split())
 
 
 def query_workflow(workflow_name, db_file='monitoring.db'):
