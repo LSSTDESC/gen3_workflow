@@ -1,6 +1,6 @@
 pipetask:
   isr:
-    requestMemory: 3000
+    requestMemory: 2700
   characterizeImage:
     requestMemory: 1000
   calibrate:
