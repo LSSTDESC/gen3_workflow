@@ -62,10 +62,11 @@ def print_status(df, task_types=DRP_TASKS):
     Given a dataframe from `query_workflow(...)` and a list of task types,
     print the numbers of each task types for each status value.
     """
-    # Get the task type names from the dataframe and sort.
-    actual_task_types = sorted(list(set(df['task_type'])))
+    # Get the task type names from the dataframe.
+    actual_task_types = set(df['task_type'])
     if task_types[0] == 'discover':
-        task_types = actual_task_types
+        # Use the discovered task types and sort.
+        task_types = sorted(list(actual_task_types))
     # Make sure task_types list includes all actual task types.
     task_types.extend(actual_task_types.difference(task_types))
 #    statuses = ('pending launched running running_ended exec_done '
