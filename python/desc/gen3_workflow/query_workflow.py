@@ -48,8 +48,9 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
     task_stderrs = sorted(list(set(df0['task_stderr'])))
     for task_stderr in task_stderrs:
         df = df0.query(f'task_stderr == "{task_stderr}"')
-        index = np.argsort(df['timestamp'])
-        status = df['task_status_name'].to_numpy()[index][-1]
+        #index = np.argsort(df['timestamp'])
+        #status = df['task_status_name'].to_numpy()[index][-1]
+        status = df['task_status_name'].to_numpy()[0]
         job_name = os.path.basename(task_stderr).split('.')[0]
         data['job_name'].append(job_name)
         data['task_type'].append(job_name.split('_')[1])
@@ -73,14 +74,14 @@ def print_status(df, task_types=DRP_TASKS):
 #                'failed dep_fail'.split())
     statuses = 'pending launched running exec_done failed dep_fail'.split()
     spacer = ' '
-    print(f'{"task_type":23}', end=spacer)
+    print(f'{"task_type":25}', end=spacer)
     for status in statuses:
         print(f'{status:>10}', end=spacer)
     print(f'{"total":>10}')
     for task_type in task_types:
         if task_type not in actual_task_types:
             continue
-        print(f'{task_type:23}', end=spacer)
+        print(f'{task_type:25}', end=spacer)
         df1 = df.query(f'task_type == "{task_type}"')
         for status in statuses:
             df2 =  df1.query(f'status == "{status}"')
