@@ -469,8 +469,11 @@ class ParslGraph(dict):
         if not use_logs:
             try:
                 self._update_status()
-                print_status(self.df, [_ for _ in DRP_TASKS if _
-                                       in self.task_types])
+                task_types = [_ for _ in DRP_TASKS if _ in self.task_types]
+                for item in self.task_types:
+                    if item not in task_types:
+                        task_types.append(item)
+                print_status(self.df, task_types)
                 return
             except FileNotFoundError:
                 pass
