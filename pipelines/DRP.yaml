@@ -1,8 +1,60 @@
-description: DRP
+description: The DRP pipeline specialized for imSim simulations of LSSTCam
+instrument: lsst.obs.lsst.LsstCamImSim
 imports:
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_SingleFrame.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_SkyCorrection.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_ConsolidateVisit.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Coaddition.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Multiband.yaml
-  - location: $GEN3_WORKFLOW_DIR/pipelines/_Forced.yaml
+  - location: $PIPE_TASKS_DIR/pipelines/DRP.yaml
+tasks:
+  isr:
+    class: lsst.ip.isr.IsrTask
+    config:
+      doBrighterFatter: True
+      connections.newBFKernel: bfk
+  calibrate:
+    class: lsst.pipe.tasks.calibrate.CalibrateTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/calibration_filterMap.py
+  skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
+  makeWarp:
+    class: lsst.pipe.tasks.makeCoaddTempExp.MakeWarpTask
+    config:
+      matchingKernelSize: 29
+      makePsfMatched: True
+      modelPsf.defaultFwhm: 7.7
+      doApplyExternalPhotoCalib: False
+      doApplyExternalSkyWcs: False
+      doApplySkyCorr: True
+      doWriteEmptyWarps: True
+      python: config.warpAndPsfMatch.psfMatch.kernel['AL'].alardSigGauss = [1.0, 2.0, 4.5]
+  mergeDetections:
+    class: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
+  #deblend: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesSingleTask
+  measure:
+    class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/measurement_filterMap.py
+  mergeMeasurements:
+    class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
+subsets:
+  processCcd:
+    subset:
+      - isr
+      - characterizeImage
+      - calibrate
+      - skyCorrectionTask
+      - consolidateVisitSummary
+  multibandDia:
+    subset:
+      - detection
+      - mergeDetections
+      - deblend
+      - measure
+      - mergeMeasurements
+  forced:
+    subset:
+      - forcedPhotCcd
+      - forcedPhotCoadd
+      - forcedPhotDiffim
+    description: Forced photometry tasks.
