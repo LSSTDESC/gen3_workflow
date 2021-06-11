@@ -49,6 +49,25 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
     return SlurmProvider('None', **provider_options)
 
 
+def set_config_options(retries, monitoring, workflow_name, checkpoint):
+    """
+    Package retries, monitoring, and checkpoint options for
+    parsl.config.Config as a dict.
+    """
+    config_options = {'retries': retries}
+    if monitoring:
+        config_options['monitoring'] \
+            = MonitoringHub(hub_address=address_by_hostname(),
+                            hub_port=55055,
+                            monitoring_debug=False,
+                            resource_monitoring_interval=60,
+                            workflow_name=workflow_name)
+    if checkpoint:
+        config_options['checkpoint_mode'] = 'task_exit'
+        config_options['checkpoint_files'] = get_all_checkpoints()
+    return config_options
+
+
 def workqueue_config(provider, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
                      log_level=logging.DEBUG, wq_max_retries=1):
@@ -63,17 +82,8 @@ def workqueue_config(provider, monitoring=False, workflow_name=None,
                                    max_retries=wq_max_retries),
                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
 
-    config_options = {'retries': retries}
-    if monitoring:
-        config_options['monitoring'] \
-            = MonitoringHub(hub_address=address_by_hostname(),
-                            hub_port=55055,
-                            monitoring_debug=False,
-                            resource_monitoring_interval=60,
-                            workflow_name=workflow_name)
-    if checkpoint:
-        config_options['checkpoint_mode'] = 'task_exit'
-        config_options['checkpoint_files'] = get_all_checkpoints()
+    config_options = set_config_options(retries, monitoring, workflow_name,
+                                        checkpoint)
 
     config = parsl.config.Config(strategy='simple',
                                  garbage_collect=False,
@@ -83,13 +93,16 @@ def workqueue_config(provider, monitoring=False, workflow_name=None,
     return parsl.load(config)
 
 
-def thread_pool_config(max_threads, retries=1,
+def thread_pool_config(max_threads, monitoring=False, workflow_name=None,
+                       checkpoint=False, retries=1,
                        labels=('submit-node', 'batch-small',
                                'batch-medium', 'batch-large')):
     """Load a parsl config using ThreadPoolExecutor."""
     executors = [ThreadPoolExecutor(max_threads=max_threads, label=label)
                  for label in labels]
-    config = parsl.config.Config(executors=executors, retries=retries)
+    config_options = set_config_options(retries, monitoring, workflow_name,
+                                        checkpoint)
+    config = parsl.config.Config(executors=executors, **config_options)
     return parsl.load(config)
 
 
@@ -102,9 +115,15 @@ def load_parsl_config(bps_config):
     # Load using a runtime-configurable parsl config.
     config = bps_config['parsl_config']
     retries = config['retries'] if config['retries'] else 0
+    workflow_name = (config['workflow_name'] if config['workflow_name']
+                     else bps_config['outCollection'])
 
     if config['executor'] == 'ThreadPool':
-        return thread_pool_config(config['max_threads'], retries=retries)
+        return thread_pool_config(config['max_threads'],
+                                  monitoring=config['monitoring'],
+                                  workflow_name=workflow_name,
+                                  checkpoint=config['checkpoint'],
+                                  retries=retries)
 
     if config['provider'] == 'Slurm':
         provider = slurm_provider(nodes_per_block=config['nodes_per_block'],
@@ -119,10 +138,6 @@ def load_parsl_config(bps_config):
                            f"bps config: {config['provider']}")
 
     if config['executor'] == 'WorkQueue':
-        if config['workflow_name']:
-            workflow_name = config['workflow_name']
-        else:
-            workflow_name = bps_config['outCollection']
         log_level = config['log_level']
         if not log_level:
             log_level = logging.DEBUG

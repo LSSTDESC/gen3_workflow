@@ -33,6 +33,7 @@ commandPrepend: ">& echo `date -Iseconds -u`; time"
 wmsServiceClass: desc.gen3_workflow.ParslService
 whenSaveJobQgraph: "NEVER"
 bpsUseShared: true
+saveGenericWorkflow: true
 
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
 createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument lsst.obs.lsst.LsstCamImSim -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'

@@ -15,10 +15,11 @@ from lsst.ctrl.bps import BpsConfig
 from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph
-import parsl
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 from desc.gen3_workflow.config import load_parsl_config
+import parsl
+from .query_workflow import query_workflow, print_status, DRP_TASKS
 
 
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob', 'ParslService']
@@ -73,7 +74,7 @@ _SCHEDULED = 'scheduled'
 _RUNNING = 'running'
 _SUCCEEDED = 'succeeded'
 _FAILED = 'failed'
-
+_EXEC_DONE = 'exec_done'
 
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
@@ -239,17 +240,24 @@ class ParslJob:
     @property
     def done(self):
         """
-        Execution state of the job based on whether the job has
-        written the 'success' string to the end of its log file.
+        Execution state of the job based on status in monintoring.db
+        or whether the job has written the 'success' string to the end
+        of its log file.
         """
         if not self._done:
-            self._done = (self.status == _SUCCEEDED)
+            if self.parent_graph.have_monitoring_info:
+                my_df = self.parent_graph.df.query(
+                    f'job_name == "{self.gwf_job.name}"')
+                self._done = (not my_df.empty and
+                              my_df.iloc[0].status == _EXEC_DONE)
+            else:
+                self._done = (self.status == _SUCCEEDED)
         return self._done
 
     @property
     def status(self):
-        """Return the job status, either _PENDING, _SCHEDULED, _RUNNING,
-        _SUCCEEDED, or _FAILED."""
+        """Return the job status (either _PENDING, _SCHEDULED, _RUNNING,
+        _SUCCEEDED, or _FAILED) based on log file contents."""
         if self._status in (_SUCCEEDED, _FAILED):
             return self._status
 
@@ -363,11 +371,15 @@ class ParslGraph(dict):
         self.dfk = dfk
         self._ingest()
         self._qgraph = None
-        self._update_status()
+        self.monitoring_db = './monitoring.db'
+        self.have_monitoring_info = False
+        try:
+            self._update_status()
+        except FileNotFoundError:
+            self._update_status_from_logs()
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
-        self.num_visits = defaultdict(dict)
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
@@ -375,25 +387,38 @@ class ParslGraph(dict):
             # Make sure pipelines without downstream dependencies are
             # ingested into the ParslGraph.
             _ = self[job_name]
-            job = self.gwf.get_job(job_name)
 
-            # Extract the numbers of visits per patch from the
-            # `assembleCoadd` tasks.
-            if 'assembleCoadd' in job.label and job.quantum_graph is not None:
-                warps = (list(job.quantum_graph)[0]
-                         .quantum.inputs['deepCoadd_directWarp'])
-                tract_patch = warps[0].dataId['tract'], warps[0].dataId['patch']
-                band = warps[0].dataId['band']
-                self.num_visits[tract_patch][band] = len(warps)
-
+            # Collect downstream dependencies and prerequisites for
+            # each job.
             for successor_job in self.gwf.successors(job_name):
                 self[job_name].add_dependency(self[successor_job])
                 self[successor_job].add_prereq(self[job_name])
 
     def _update_status(self):
         """
+        Update the pandas dataframe containing the workflow status using
+        the monitoring db.
+        """
+        # Get job status values from monitoring db.
+        df = query_workflow(self.config['outCollection'],
+                            db_file=self.monitoring_db)
+        # Make entries for jobs that are not yet in the monitoring db.
+        current_jobs = set() if df.empty else set(df['job_name'])
+        data = defaultdict(list)
+        for job_name in self:
+            if job_name in current_jobs:
+                continue
+            data['job_name'].append(job_name)
+            data['task_type'].append(job_name.split('_')[1])
+            data['status'].append(_PENDING)
+        self.df = pd.concat((df, pd.DataFrame(data=data)))
+        self.task_types = set(self.df['task_type'])
+        self.have_monitoring_info = True
+
+    def _update_status_from_logs(self):
+        """
         Update the pandas dataframe containing the workflow status and
-        job metadata.
+        job metadata using the task log files.
         """
         self.task_types = []
         data = defaultdict(list)
@@ -439,9 +464,20 @@ class ParslGraph(dict):
             my_query = ' and '.join((my_query, query))
         return list(self.df.query(my_query)['job_name'])
 
-    def status(self):
+    def status(self, use_logs=False):
         """Print a summary of the workflow status."""
-        self._update_status()
+        if not use_logs:
+            try:
+                self._update_status()
+                task_types = [_ for _ in DRP_TASKS if _ in self.task_types]
+                for item in self.task_types:
+                    if item not in task_types:
+                        task_types.append(item)
+                print_status(self.df, task_types)
+                return
+            except FileNotFoundError:
+                pass
+        self._update_status_from_logs()
         summary = ['task type                '
                    'pending  scheduled  running  succeeded  failed  total\n']
         for task_type in self.task_types:

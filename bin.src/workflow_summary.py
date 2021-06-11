@@ -3,8 +3,7 @@
 Script to print a summary of workflow status.
 """
 import argparse
-from desc.gen3_workflow import query_workflow, print_status
-
+from desc.gen3_workflow import query_workflow, print_status, DRP_TASKS
 
 parser = argparse.ArgumentParser(
     description='Print a summary of workflow status.')
@@ -20,12 +19,7 @@ parser.add_argument('--tasks', type=str, nargs='+', default='DRP',
 
 args = parser.parse_args()
 
-tasks = args.tasks if args.tasks != 'DRP' else \
-           ('isr characterizeImage calibrate skyCorrectionTask '
-            'consolidateVisitSummary makeWarp selectGoodSeeingVisits '
-            'assembleCoadd templateGen detection imageDifference '
-            'mergeDetections deblend measure mergeMeasurements '
-            'forcedPhotCoadd forcedPhotCcd forcedPhotDiffim'.split())
+tasks = args.tasks if args.tasks != 'DRP' else DRP_TASKS
 
 df = query_workflow(args.workflow_name, db_file=args.db_file)
 print_status(df, tasks)

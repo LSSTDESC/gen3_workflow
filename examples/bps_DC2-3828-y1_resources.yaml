@@ -1,6 +1,6 @@
 pipetask:
   isr:
-    requestMemory: 3000
+    requestMemory: 2700
   characterizeImage:
     requestMemory: 1000
   calibrate:
@@ -15,10 +15,10 @@ pipetask:
     requestMemory: 1500
   imageDifference:
     requestMemory: 3100
-  forcedPhtDiffim:
-    requestMemory: 1000
+  forcedPhotDiffim:
+    requestMemory: 2500
   skyCorrectionTask:
-    requestMemory: 1800
+    requestMemory: 8000
   makeWarp:
     requestMemory: 3500
   assembleCoadd:
