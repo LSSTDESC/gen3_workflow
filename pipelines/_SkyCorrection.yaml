@@ -1,8 +1,0 @@
-description: SkyCorrection
-tasks:
-  skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
-subsets:
-  skyCorrection:
-    subset:
-      - skyCorrectionTask
-    description: A task to run sky-correction on a visit
