@@ -15,6 +15,26 @@ import lsst.utils
 __all__ = ['load_parsl_config']
 
 
+def local_provider(nodes_per_block=1, **other_options):
+    """
+    Factory function to provide a LocalProvider, with the option to
+    set the number of nodes to use.  If nodes_per_block > 1, then
+    use `launcher=SrunLauncher(overrides='-K0 -k --slurmd-debug=verbose')`,
+    otherwise use the default, `launcher=SingleNodeLauncher()`.
+    """
+    provider_options = dict(nodes_per_block=nodes_per_block,
+                            init_blocks=0,
+                            min_blocks=0,
+                            max_blocks=1,
+                            parallelism=0,
+                            cmd_timeout=300)
+    if nodes_per_block > 1:
+        provider_options['launcher'] \
+            = SrunLauncher(overrides='-K0 -k --slurmd-debug=verbose')
+    provider_options.update(other_options)
+    return LocalProvider(**provider_options)
+
+
 def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
                    walltime='10:00:00', time_min=None, **other_options):
     """Factory function to provide a SlurmProvider for running at NERSC."""
@@ -132,7 +152,7 @@ def load_parsl_config(bps_config):
                                   walltime=config['walltime'],
                                   time_min=config['time_min'])
     elif config['provider'] == 'Local':
-        provider = LocalProvider(init_blocks=0, min_blocks=0, max_blocks=1)
+        provider = local_provider(nodes_per_block=config['nodes_per_block'])
     else:
         raise RuntimeError("Unknown or unspecified provider in "
                            f"bps config: {config['provider']}")
