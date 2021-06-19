@@ -25,7 +25,7 @@ parslConfig: desc.gen3_workflow.config.workQueue_local_config
 #parslConfig: desc.gen3_workflow.config.thread_pool_config_4
 #parslConfig: desc.gen3_workflow.config.thread_pool_config_32
 
-commandPrepend: ">& echo `date -Iseconds -u`; time"
+commandPrepend: "time"
 
 #shifter_id: lsstsqre/centos:7-stack-lsst_distrib-w_2021_18
 #commandPrepend: ">& echo `date -Iseconds -u`; shifter -E --image={shifter_id} ${GEN3_WORKFLOW_DIR}/scripts/cl_wrapper.sh"
