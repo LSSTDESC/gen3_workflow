@@ -15,7 +15,7 @@ import lsst.utils
 __all__ = ['load_parsl_config']
 
 
-def local_provider(nodes_per_block=1, **other_options):
+def local_provider(nodes_per_block=1, **unused_options):
     """
     Factory function to provide a LocalProvider, with the option to
     set the number of nodes to use.  If nodes_per_block > 1, then
@@ -31,22 +31,12 @@ def local_provider(nodes_per_block=1, **other_options):
     if nodes_per_block > 1:
         provider_options['launcher'] \
             = SrunLauncher(overrides='-K0 -k --slurmd-debug=verbose')
-    provider_options.update(other_options)
     return LocalProvider(**provider_options)
 
 
 def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
-                   walltime='10:00:00', time_min=None, **other_options):
+                   walltime='10:00:00', time_min=None, **unused_options):
     """Factory function to provide a SlurmProvider for running at NERSC."""
-    # Guard against empty string or None values for required keywords.
-    if not nodes_per_block:
-        nodes_per_block = 1
-    if not constraint:
-        constraint = 'knl'
-    if not qos:
-        qos = 'regular'
-    if not walltime:
-        walltime = '10:00:00'
     scheduler_options = (f'#SBATCH --constraint={constraint}\n'
                          f'#SBATCH --qos={qos}\n'
                          '#SBATCH --module=cvmfs\n'
@@ -65,7 +55,6 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
                             launcher=SrunLauncher(
                                 overrides='-K0 -k --slurmd-debug=verbose'),
                             cmd_timeout=300)
-    provider_options.update(other_options)
     return SlurmProvider('None', **provider_options)
 
 
@@ -88,9 +77,10 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint):
     return config_options
 
 
-def workqueue_config(provider, monitoring=False, workflow_name=None,
+def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     log_level=logging.DEBUG, wq_max_retries=1):
+                     log_level=logging.DEBUG, wq_max_retries=1,
+                     **unused_options):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
     logger = logging.getLogger("parsl.executors.workqueue.executor")
     logger.setLevel(log_level)
@@ -113,10 +103,11 @@ def workqueue_config(provider, monitoring=False, workflow_name=None,
     return parsl.load(config)
 
 
-def thread_pool_config(max_threads, monitoring=False, workflow_name=None,
+def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
                        checkpoint=False, retries=1,
                        labels=('submit-node', 'batch-small',
-                               'batch-medium', 'batch-large')):
+                               'batch-medium', 'batch-large'),
+                       **unused_options):
     """Load a parsl config using ThreadPoolExecutor."""
     executors = [ThreadPoolExecutor(max_threads=max_threads, label=label)
                  for label in labels]
@@ -133,51 +124,33 @@ def load_parsl_config(bps_config):
         return lsst.utils.doImport(bps_config['parslConfig']).DFK
 
     # Load using a runtime-configurable parsl config.
-    config = bps_config['parsl_config']
-    retries = config['retries'] if config['retries'] else 0
-    workflow_name = (config['workflow_name'] if config['workflow_name']
-                     else bps_config['outCollection'])
+    #
+    # Cast the BpsConfig object as a Python dict to disable the
+    # behavior of BpsConfig to return an empty string for missing keys
+    # and to provide the dict.get method for handling default values.
+    config = dict(bps_config['parsl_config'])
+    config['retries'] = config.get('retries', 0)
+    config['workflow_name'] \
+        = config.get('workflow_name', bps_config['outCollection'])
 
     if config['executor'] == 'ThreadPool':
-        return thread_pool_config(config['max_threads'],
-                                  monitoring=config['monitoring'],
-                                  workflow_name=workflow_name,
-                                  checkpoint=config['checkpoint'],
-                                  retries=retries)
+        return thread_pool_config(**config)
 
     if config['provider'] == 'Slurm':
-        provider = slurm_provider(nodes_per_block=config['nodes_per_block'],
-                                  constraint=config['constraint'],
-                                  qos=config['qos'],
-                                  walltime=config['walltime'],
-                                  time_min=config['time_min'])
+        config['provider'] = slurm_provider(**config)
     elif config['provider'] == 'Local':
-        provider = local_provider(nodes_per_block=config['nodes_per_block'])
+        config['provider'] = local_provider(**config)
     else:
         raise RuntimeError("Unknown or unspecified provider in "
                            f"bps config: {config['provider']}")
 
     if config['executor'] == 'WorkQueue':
-        log_level = config['log_level']
-        if not log_level:
-            log_level = logging.DEBUG
-        else:
-            log_level = eval(log_level)
-        wq_max_retries = config['wq_max_retries']
-        if wq_max_retries == 'None':
-            wq_max_retries = None
-        elif wq_max_retries == '':
-            wq_max_retries = 1
-        else:
-            wq_max_retries = int(wq_max_retries)
-        return workqueue_config(provider,
-                                monitoring=config['monitoring'],
-                                workflow_name=workflow_name,
-                                checkpoint=config['checkpoint'],
-                                retries=retries,
-                                worker_options=config['worker_options'],
-                                log_level=log_level,
-                                wq_max_retries=wq_max_retries)
+        config['log_level'] = eval(config.get('log_level', 'logging.DEBUG'))
+        try:
+            config['wq_max_retries'] = int(config.get('wq_max_retries', 1))
+        except ValueError:
+            config['wq_max_retries'] = None
+        return workqueue_config(**config)
 
     raise RuntimeError("Unknown or unspecified executor in "
                        f"bps config: {config['executor']}")
