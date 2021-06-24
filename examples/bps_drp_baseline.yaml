@@ -40,4 +40,4 @@ clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clusteri
 
 createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument {instrument} -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
 
-runQuantumCommand: "pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-partial-outputs --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId}"
+runQuantumCommand: "pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-outputs --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId}"

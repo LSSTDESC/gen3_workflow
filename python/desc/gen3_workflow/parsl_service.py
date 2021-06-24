@@ -12,7 +12,9 @@ import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
 from lsst.ctrl.bps import BpsConfig
-from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER, create_submission
+from lsst.ctrl.bps.drivers import transform_driver
+from lsst.ctrl.bps.prepare import prepare
+from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph
 from desc.gen3_workflow.bash_apps import \
@@ -54,10 +56,10 @@ def start_pipeline(config_file, outfile=None, mode='symlink'):
     """
     if outfile is not None and os.path.isfile(outfile):
         raise FileExistsError(f"File exists: '{outfile}'")
-    config = BpsConfig(config_file, BPS_SEARCH_ORDER)
-    workflow = create_submission(config)
-    as_run_config = os.path.join('submit', config['outCollection'],
-                                 _PARSL_GRAPH_CONFIG)
+    config, generic_workflow = transform_driver(config_file)
+    submit_path = config['submitPath']
+    workflow = prepare(config, generic_workflow, submit_path)
+    as_run_config = os.path.join(submit_path, _PARSL_GRAPH_CONFIG)
     workflow.parsl_graph.dfk = load_parsl_config(config)
     workflow.parsl_graph.save_config(as_run_config)
     if outfile is not None:
