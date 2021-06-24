@@ -33,7 +33,6 @@ commandPrepend: "time"
 
 wmsServiceClass: desc.gen3_workflow.ParslService
 whenSaveJobQgraph: "NEVER"
-bpsUseShared: true
 saveGenericWorkflow: true
 
 clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
