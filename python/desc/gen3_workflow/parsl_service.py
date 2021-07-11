@@ -16,12 +16,14 @@ from lsst.ctrl.bps.drivers import transform_driver
 from lsst.ctrl.bps.prepare import prepare
 from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
-from lsst.pipe.base.graph import QuantumGraph
+from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 from desc.gen3_workflow.config import load_parsl_config
 import parsl
 from .query_workflow import query_workflow, print_status, DRP_TASKS
+from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
+    insert_file_paths
 
 
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob', 'ParslService']
@@ -217,7 +219,7 @@ class ParslJob:
         prefix = self.config.get('commandPrepend')
         if prefix:
             command = ' '.join([prefix, command])
-        return command
+        return self.parent_graph.evaluate_command_line(command, self.gwf_job)
 
     def add_dependency(self, dependency):
         """
@@ -337,11 +339,10 @@ class ParslJob:
     @property
     def qgraph_nodes(self):
         """Return the list of nodes from the underlying QuantumGraph."""
-        if self.gwf_job.quantum_graph is not None:
-            return self.gwf_job.quantum_graph
         qgraph = self.parent_graph.qgraph
-        return [qgraph.getQuantumNodeByNodeId(_)
-                for _ in self.gwf_job.qgraph_node_ids]
+        return [qgraph.getQuantumNodeByNodeId(NodeId(*_))
+                for _ in [(int(self.gwf_job.cmdvals['qgraphNodeId']),
+                           self.gwf_job.cmdvals['qgraphId'])]]
 
 
 class ParslGraph(dict):
@@ -506,13 +507,26 @@ class ParslGraph(dict):
             super().__setitem__(job_name, ParslJob(gwf_job, self))
         return super().__getitem__(job_name)
 
+    def evaluate_command_line(self, command, gwf_job):
+        """
+        Evaluate command line, replacing bps variables, fixing env vars,
+        and inserting job-specific file paths, all assuming that
+        everything is running on a shared file system.
+        """
+        command = command.format(**gwf_job.cmdvals)
+        command = fix_env_var_syntax(command)
+        file_paths = get_input_file_paths(self.gwf, gwf_job.name)
+        return insert_file_paths(command, file_paths)
+
     def _pipetaskInit(self):
         """If the output collection isn't in the repo, run pipetaskInit."""
         butler = Butler(self.config['butlerConfig'])
+        job_name = 'pipetaskInit'
         if self.config['outCollection'] not in \
            butler.registry.queryCollections():
-            pipetaskInit = self.gwf.get_job('pipetaskInit')
+            pipetaskInit = self.gwf.get_job(job_name)
             command = 'time ' + pipetaskInit.cmdline
+            command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
     @staticmethod
