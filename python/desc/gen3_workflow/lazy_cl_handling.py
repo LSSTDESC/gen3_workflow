@@ -1,7 +1,7 @@
 """
 Functions to set environment variables and file paths in command
 lines at the plugin level.  Environment variables are left in the form
-${<env var>} so that the shell can evaluated them at execution time.
+${<env var>} so that the shell can evaluate them at execution time.
 File paths are set using the bare GenericWorkflowFile.src_uri values,
 so that everything is assumed to be run on a shared file system.
 """
