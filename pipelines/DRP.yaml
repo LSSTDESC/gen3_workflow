@@ -8,10 +8,14 @@ tasks:
     config:
       doBrighterFatter: True
       connections.newBFKernel: bfk
+  characterizeImage:
+    class: lsst.pipe.tasks.characterizeImage.CharacterizeImageTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/characterizeImage.py
   calibrate:
     class: lsst.pipe.tasks.calibrate.CalibrateTask
     config:
-      file: $GEN3_WORKFLOW_DIR/config/calibration_filterMap.py
+      file: $GEN3_WORKFLOW_DIR/config/calibrate.py
   skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
   makeWarp:
     class: lsst.pipe.tasks.makeCoaddTempExp.MakeWarpTask
