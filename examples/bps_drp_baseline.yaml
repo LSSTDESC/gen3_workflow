@@ -1,30 +1,18 @@
 operator: jchiang
-pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
-templateDataId: "{tract}_{patch}_{band}_{visit}_{detector}"
 project: DESC
 campaign: DC2
-submitPath: ${PWD}/submit/{outCollection}
-requestMemory: 2000
-requestCpus: 1
-instrument: lsst.obs.lsst.LsstCamImSim
 
-payload:
-  runInit: true
-  payloadName: DC2_dataset
-  butlerConfig: ${PWD}/gen3-repo
-  inCollection: LSSTCam-imSim/defaults
-  outCollection: shared/drp_test/{timestamp}
-  dataQuery: skymap='DC2'
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
+
+executionButler:
+  whenCreate: "PREPARE"
 
 pipetask:
+  # add "--no-versions" to default pipetaskInit
   pipetaskInit:
-    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --skip-existing --register-dataset-types --qgraph {qgraphFile} --no-versions"
+    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --register-dataset-types --qgraph {qgraphFile} --extend-run --no-versions"
 
-parslConfig: desc.gen3_workflow.config.workQueue_local_config
-#parslConfig: desc.gen3_workflow.config.workQueue_knl_config
-#parslConfig: desc.gen3_workflow.config.workQueue_knl_debug_config
-#parslConfig: desc.gen3_workflow.config.thread_pool_config_4
-#parslConfig: desc.gen3_workflow.config.thread_pool_config_32
+parslConfig: desc.gen3_workflow.config.thread_pool_config_4
 
 commandPrepend: "time"
 
@@ -34,9 +22,3 @@ commandPrepend: "time"
 wmsServiceClass: desc.gen3_workflow.ParslService
 whenSaveJobQgraph: "NEVER"
 saveGenericWorkflow: true
-
-clusterAlgorithm: lsst.ctrl.bps.quantum_clustering_funcs.single_quantum_clustering
-
-createQuantumGraph: '${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -d "{dataQuery}" -b {butlerConfig} -i {inCollection} --instrument {instrument} -p {pipelineYaml} -q {qgraphFile} --qgraph-dot {qgraphFile}.dot'
-
-runQuantumCommand: "pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --extend-run --skip-init-writes --qgraph {qgraphFile} --no-versions --clobber-outputs --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId}"

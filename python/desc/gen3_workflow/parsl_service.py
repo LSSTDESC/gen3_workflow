@@ -11,10 +11,9 @@ import pandas as pd
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
-from lsst.ctrl.bps import BpsConfig
+from lsst.ctrl.bps import BpsConfig, BPS_SEARCH_ORDER
 from lsst.ctrl.bps.drivers import transform_driver
 from lsst.ctrl.bps.prepare import prepare
-from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
@@ -566,7 +565,7 @@ class ParslGraph(dict):
         lsst.daf.butler.DimensionUniverse()
         with open(config_file, 'rb') as fd:
             config = pickle.load(fd)
-        gwf_pickle_file = os.path.join(config['submit_path'],
+        gwf_pickle_file = os.path.join(config['submitPath'],
                                        'bps_generic_workflow.pickle')
         with open(gwf_pickle_file, 'rb') as fd:
             generic_workflow = pickle.load(fd)
@@ -600,6 +599,17 @@ class ParslGraph(dict):
             # needed for running in a non-interactive python process
             # that would otherwise end before the futures resolve.
             _ = [future.result() for future in futures]
+            # Since we're running non-interactively, run self.finalize()
+            # to transfer datasets to the destination butler.
+            self.finalize()
+
+    def finalize(self):
+        """Run final job to transfer datasets from the execution butler to
+        the destination repo butler."""
+        command = (f"bash {self.config['submitPath']}/final_job.bash "
+                   f"{self.config['butlerConfig']} "
+                   f"{self.config['executionButlerTemplate']}")
+        subprocess.check_call(command, shell=True)
 
 
 class ParslService(BaseWmsService):
