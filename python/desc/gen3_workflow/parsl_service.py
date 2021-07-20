@@ -127,8 +127,14 @@ class ResourceSpecs:
         """
         Return the parsl resource specification for the desired task.
         """
-        response = {_: self.resource_value(_, job, *args)
-                    for _ in self.resources}
+        response = dict()
+        for _ in self.resources:
+            value = self.resource_value(_, job, *args)
+            if value is None:
+                # Parsl needs a number, and using zero results in no
+                # resource constraint being applied.
+                value = 0
+            response[_] = value
         # Parsl expects 'cores' instead of 'cpus'
         response['cores'] = response.pop('cpus')
         return response
