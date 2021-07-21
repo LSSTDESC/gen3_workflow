@@ -5,6 +5,9 @@ ${<env var>} so that the shell can evaluate them at execution time.
 File paths are set using the bare GenericWorkflowFile.src_uri values,
 so that everything is assumed to be run on a shared file system.
 """
+import os
+import glob
+import shutil
 import re
 
 
@@ -23,7 +26,22 @@ def get_input_file_paths(generic_workflow, job_name):
     """Return a dictionary of file paths, keyed by input name."""
     file_paths = dict()
     for item in generic_workflow.get_job_inputs(job_name):
-        file_paths[item.name] = item.src_uri
+        if item.name == 'butlerConfig' and not item.job_shared:
+            # This block is needed by the execution butler so that
+            # a non-shared copy of the butler repo is available for
+            # each job.
+            exec_butler_dir = os.path.dirname(item.src_uri) \
+                if item.src_uri.endswith('butler.yaml') else item.src_uri
+            dest_dir = os.path.join(os.path.dirname(exec_butler_dir),
+                                    'tmp_repos', job_name)
+            os.makedirs(dest_dir, exist_ok=True)
+            for src in glob.glob(os.path.join(exec_butler_dir, '*')):
+                dest = os.path.join(dest_dir, os.path.basename(src))
+                if not os.path.isfile(dest):
+                    shutil.copy(src, dest)
+            file_paths[item.name] = dest_dir
+        else:
+            file_paths[item.name] = item.src_uri
     return file_paths
 
 
