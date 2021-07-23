@@ -17,3 +17,9 @@ config.measureApCorr.sourceSelector['science'].signalToNoise.maximum = None
 config.measureApCorr.sourceSelector['science'].signalToNoise.fluxField = 'base_PsfFlux_instFlux'
 config.measureApCorr.sourceSelector['science'].signalToNoise.errField = 'base_PsfFlux_instFluxErr'
 config.measureApCorr.sourceSelector.name = 'science'
+
+# Reducuce Chebyshev polynomial order for background fitting (DM-30820)
+# This replaces running the separate sky correction task.
+config.detection.background.approxOrderX = 1
+config.detection.tempLocalBackground.approxOrderX = 1
+config.detection.tempWideBackground.approxOrderX = 1

@@ -16,7 +16,7 @@ tasks:
     class: lsst.pipe.tasks.calibrate.CalibrateTask
     config:
       file: $GEN3_WORKFLOW_DIR/config/calibrate.py
-  skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
+  #skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
   makeWarp:
     class: lsst.pipe.tasks.makeCoaddTempExp.MakeWarpTask
     config:
@@ -25,7 +25,8 @@ tasks:
       modelPsf.defaultFwhm: 7.7
       doApplyExternalPhotoCalib: False
       doApplyExternalSkyWcs: False
-      doApplySkyCorr: True
+      #doApplySkyCorr: True
+      doApplySkyCorr: False
       doWriteEmptyWarps: True
       python: config.warpAndPsfMatch.psfMatch.kernel['AL'].alardSigGauss = [1.0, 2.0, 4.5]
   mergeDetections:
@@ -47,7 +48,7 @@ subsets:
       - isr
       - characterizeImage
       - calibrate
-      - skyCorrectionTask
+      #- skyCorrectionTask
       - consolidateVisitSummary
   multibandDia:
     subset:

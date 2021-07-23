@@ -20,3 +20,11 @@ config.photoCal.match.sourceSelection.doSignalToNoise = True
 config.photoCal.match.sourceSelection.signalToNoise.minimum = 150
 config.photoCal.match.sourceSelection.signalToNoise.fluxField = 'base_PsfFlux_instFlux'
 config.photoCal.match.sourceSelection.signalToNoise.errField = 'base_PsfFlux_instFluxErr'
+
+# Reduce Chebyshev polynomial order for background fitting (DM-30820)
+# This replaces running the separate sky correction task.
+config.background.approxOrderX = 1
+config.detection.background.approxOrderX = 1
+config.detection.tempLocalBackground.approxOrderX = 1
+config.detection.tempWideBackground.approxOrderX = 1
+config.repair.cosmicray.background.approxOrderX = 1
