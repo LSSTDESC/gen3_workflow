@@ -626,6 +626,13 @@ class ParslGraph(dict):
                    f"{self.config['executionButlerTemplate']}")
         subprocess.check_call(command, shell=True)
 
+    def clean_up_exec_butler_files(self):
+        """Clean up the copies of the execution butler."""
+        temp_repo_dir = os.path.join(self.config['executionButlerTemplate'],
+                                     'tmp_repos')
+        if os.path.isdir(temp_repo_dir):
+            shutil.rmtree(temp_repo_dir)
+
 
 class ParslService(BaseWmsService):
     """Parsl-based implementation for the WMS interface."""
