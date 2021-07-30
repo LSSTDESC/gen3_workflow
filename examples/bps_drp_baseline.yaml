@@ -10,7 +10,7 @@ executionButler:
 pipetask:
   # add "--no-versions" to default pipetaskInit
   pipetaskInit:
-    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --register-dataset-types --qgraph {qgraphFile} --extend-run --no-versions"
+    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --register-dataset-types --qgraph {qgraphFile} --no-versions"
 
 parslConfig: desc.gen3_workflow.config.thread_pool_config_4
 

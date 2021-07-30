@@ -26,7 +26,8 @@ def get_input_file_paths(generic_workflow, job_name):
     """Return a dictionary of file paths, keyed by input name."""
     file_paths = dict()
     for item in generic_workflow.get_job_inputs(job_name):
-        if item.name == 'butlerConfig' and not item.job_shared:
+        if (item.name == 'butlerConfig' and not item.job_shared and
+            job_name != 'pipetaskInit'):  # pipetaskInit needs special handling
             # This block is needed by the execution butler so that
             # a non-shared copy of the butler repo is available for
             # each job.

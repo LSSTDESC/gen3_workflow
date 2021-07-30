@@ -191,6 +191,11 @@ def no_op_job():
     return 0
 
 
+def _cmdline(gwf_job):
+    """Command line for a GenericWorkflowJob."""
+    return ' '.join((gwf_job.executable.src_uri, gwf_job.arguments))
+
+
 class ParslJob:
     """
     Wrapper class for a GenericWorkflowJob.  This class keeps track of
@@ -219,8 +224,8 @@ class ParslJob:
 
     def command_line(self):
         """Return the job command line to run in bash."""
-        command = (self.gwf_job.cmdline +
-                   ' && >&2 echo success || (>&2 echo failure; false)')
+        command = _cmdline(self.gwf_job) \
+            + ' && >&2 echo success || (>&2 echo failure; false)'
         prefix = self.config.get('commandPrepend')
         if prefix:
             command = ' '.join([prefix, command])
@@ -530,7 +535,11 @@ class ParslGraph(dict):
         if self.config['outCollection'] not in \
            butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
-            command = 'time ' + pipetaskInit.cmdline
+            command = 'time ' + _cmdline(pipetaskInit)
+            # pipetaskInit needs to handle the butlerConfig differently
+            # than QG jobs since the execution butler doesn't yet exist.
+            command = command.replace('<FILE:butlerConfig>',
+                                      self.config['butlerConfig'])
             command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
