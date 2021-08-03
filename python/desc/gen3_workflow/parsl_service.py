@@ -7,7 +7,6 @@ import shutil
 from collections import defaultdict
 import pickle
 import subprocess
-import pandas as pd
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
@@ -412,6 +411,7 @@ class ParslGraph(dict):
         Update the pandas dataframe containing the workflow status using
         the monitoring db.
         """
+        import pandas as pd
         # Get job status values from monitoring db.
         df = query_workflow(self.config['outCollection'],
                             db_file=self.monitoring_db)
@@ -433,6 +433,7 @@ class ParslGraph(dict):
         Update the pandas dataframe containing the workflow status and
         job metadata using the task log files.
         """
+        import pandas as pd
         self.task_types = []
         data = defaultdict(list)
         _, template_id = self.config.search('templateDataId',
@@ -575,6 +576,8 @@ class ParslGraph(dict):
         -------
         ParslGraph object
         """
+        from lsst.ctrl.bps import BpsConfig
+        from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER
         # Need to have created a DimensionUniverse object to load a
         # pickled QuantumGraph.
         lsst.daf.butler.DimensionUniverse()
