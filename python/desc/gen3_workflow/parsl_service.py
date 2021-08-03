@@ -10,6 +10,7 @@ import subprocess
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
+from lsst.ctrl.bps import BpsConfig, BPS_SEARCH_ORDER
 from lsst.ctrl.bps.drivers import transform_driver
 from lsst.ctrl.bps.prepare import prepare
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
@@ -125,8 +126,14 @@ class ResourceSpecs:
         """
         Return the parsl resource specification for the desired task.
         """
-        response = {_: self.resource_value(_, job, *args)
-                    for _ in self.resources}
+        response = dict()
+        for _ in self.resources:
+            value = self.resource_value(_, job, *args)
+            if value is None:
+                # Parsl needs a number, and using zero results in no
+                # resource constraint being applied.
+                value = 0
+            response[_] = value
         # Parsl expects 'cores' instead of 'cpus'
         response['cores'] = response.pop('cpus')
         return response
@@ -183,6 +190,11 @@ def no_op_job():
     return 0
 
 
+def _cmdline(gwf_job):
+    """Command line for a GenericWorkflowJob."""
+    return ' '.join((gwf_job.executable.src_uri, gwf_job.arguments))
+
+
 class ParslJob:
     """
     Wrapper class for a GenericWorkflowJob.  This class keeps track of
@@ -211,8 +223,8 @@ class ParslJob:
 
     def command_line(self):
         """Return the job command line to run in bash."""
-        command = (self.gwf_job.cmdline +
-                   ' && >&2 echo success || (>&2 echo failure; false)')
+        command = _cmdline(self.gwf_job) \
+            + ' && >&2 echo success || (>&2 echo failure; false)'
         prefix = self.config.get('commandPrepend')
         if prefix:
             command = ' '.join([prefix, command])
@@ -524,7 +536,11 @@ class ParslGraph(dict):
         if self.config['outCollection'] not in \
            butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
-            command = 'time ' + pipetaskInit.cmdline
+            command = 'time ' + _cmdline(pipetaskInit)
+            # pipetaskInit needs to handle the butlerConfig differently
+            # than QG jobs since the execution butler doesn't yet exist.
+            command = command.replace('<FILE:butlerConfig>',
+                                      self.config['butlerConfig'])
             command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
@@ -567,7 +583,7 @@ class ParslGraph(dict):
         lsst.daf.butler.DimensionUniverse()
         with open(config_file, 'rb') as fd:
             config = pickle.load(fd)
-        gwf_pickle_file = os.path.join(config['submit_path'],
+        gwf_pickle_file = os.path.join(config['submitPath'],
                                        'bps_generic_workflow.pickle')
         with open(gwf_pickle_file, 'rb') as fd:
             generic_workflow = pickle.load(fd)
@@ -601,6 +617,24 @@ class ParslGraph(dict):
             # needed for running in a non-interactive python process
             # that would otherwise end before the futures resolve.
             _ = [future.result() for future in futures]
+            # Since we're running non-interactively, run self.finalize()
+            # to transfer datasets to the destination butler.
+            self.finalize()
+
+    def finalize(self):
+        """Run final job to transfer datasets from the execution butler to
+        the destination repo butler."""
+        command = (f"bash {self.config['submitPath']}/final_job.bash "
+                   f"{self.config['butlerConfig']} "
+                   f"{self.config['executionButlerTemplate']}")
+        subprocess.check_call(command, shell=True)
+
+    def clean_up_exec_butler_files(self):
+        """Clean up the copies of the execution butler."""
+        temp_repo_dir = os.path.join(self.config['executionButlerTemplate'],
+                                     'tmp_repos')
+        if os.path.isdir(temp_repo_dir):
+            shutil.rmtree(temp_repo_dir)
 
 
 class ParslService(BaseWmsService):
