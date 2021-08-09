@@ -11,7 +11,8 @@ import shutil
 import re
 
 
-__all__ = ['fix_env_var_syntax', 'get_input_file_paths', 'insert_file_paths']
+__all__ = ['fix_env_var_syntax', 'copy_exec_butler_files',
+           'get_input_file_paths', 'insert_file_paths']
 
 
 def fix_env_var_syntax(oldstr):
@@ -22,24 +23,28 @@ def fix_env_var_syntax(oldstr):
     return newstr
 
 
-def get_input_file_paths(generic_workflow, job_name):
+def copy_exec_butler_files(exec_butler_dir, job_name, tmp_dirname='tmp_repos'):
+    """Make a non-shared copy of the butler repo for each job."""
+    dest_dir = os.path.join(os.path.dirname(exec_butler_dir), tmp_dirname,
+                            job_name)
+    os.make_dirs(dest_dir, exist_ok=True)
+    for src in glob.glob(os.path.join(exec_butler_dir, '*')):
+        dest = os.path.join(dest_dir, os.path.basename(src))
+        if not os.path.isfile(dest):
+            shutil.copy(src, dest)
+    return dest_dir
+
+
+def get_input_file_paths(generic_workflow, job_name, tmp_dirname='tmp_repos'):
     """Return a dictionary of file paths, keyed by input name."""
     file_paths = dict()
     for item in generic_workflow.get_job_inputs(job_name):
         if (item.name == 'butlerConfig' and not item.job_shared and
             job_name != 'pipetaskInit'):  # pipetaskInit needs special handling
-            # This block is needed by the execution butler so that
-            # a non-shared copy of the butler repo is available for
-            # each job.
             exec_butler_dir = os.path.dirname(item.src_uri) \
                 if item.src_uri.endswith('butler.yaml') else item.src_uri
-            dest_dir = os.path.join(os.path.dirname(exec_butler_dir),
-                                    'tmp_repos', job_name)
-            os.makedirs(dest_dir, exist_ok=True)
-            for src in glob.glob(os.path.join(exec_butler_dir, '*')):
-                dest = os.path.join(dest_dir, os.path.basename(src))
-                if not os.path.isfile(dest):
-                    shutil.copy(src, dest)
+            dest_dir = copy_exec_butler_files(exec_butler_dir, job_name,
+                                              tmp_dirname=tmp_dirname)
             file_paths[item.name] = dest_dir
         else:
             file_paths[item.name] = item.src_uri
