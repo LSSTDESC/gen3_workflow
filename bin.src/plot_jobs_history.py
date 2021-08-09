@@ -31,8 +31,6 @@ if args.workflow_name is None:
             print(' ', workflow_name)
     sys.exit(0)
 
-workflow_name = 'workQueue_csd3_monitoring_config.py'
-db_file = 'monitoring-3828.db'
 
 query = f'''select run_id, time_began from workflow where
             workflow_name="{args.workflow_name}"'''
@@ -54,6 +52,9 @@ for run_id, start_time in zip(run_ids, start_times):
 
     with sqlite3.connect(args.db_file) as conn:
         df0 = pd.read_sql(query, conn)
+
+    if len(df0) == 0:
+        continue
 
     data = defaultdict(list)
     job_logs = set(df0.query('task_status_name == "running"')['task_stderr'])
@@ -104,5 +105,5 @@ for run_id, start_time in zip(run_ids, start_times):
     plt.legend(fontsize='x-small')
     plt.xlabel(f'24*60*(mjd - {t0})')
     plt.ylabel('# concurrent jobs')
-    plt.title(f'{workflow_name} {start_time}')
-    plt.savefig(f'CSD3_DC2_3828_y1_{start_time}.png')
+    plt.title(f'{args.workflow_name} {start_time}')
+    plt.savefig(f'{args.workflow_name.replace("/", "_")}_{start_time}.png')
