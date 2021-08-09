@@ -576,8 +576,7 @@ class ParslGraph(dict):
         -------
         ParslGraph object
         """
-        from lsst.ctrl.bps import BpsConfig
-        from lsst.ctrl.bps.submit import BPS_SEARCH_ORDER
+        from lsst.ctrl.bps import BpsConfig, BPS_SEARCH_ORDER
         # Need to have created a DimensionUniverse object to load a
         # pickled QuantumGraph.
         lsst.daf.butler.DimensionUniverse()
@@ -599,7 +598,7 @@ class ParslGraph(dict):
 
         return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
-    def run(self, jobs=None, block=False):
+    def run(self, jobs=None, block=False, finalize=True):
         """
         Run the encapsulated workflow by requesting the futures of
         the requested jobs or of those at the endpoints of the DAG.
@@ -619,7 +618,8 @@ class ParslGraph(dict):
             _ = [future.result() for future in futures]
             # Since we're running non-interactively, run self.finalize()
             # to transfer datasets to the destination butler.
-            self.finalize()
+            if finalize:
+                self.finalize()
 
     def finalize(self):
         """Run final job to transfer datasets from the execution butler to
