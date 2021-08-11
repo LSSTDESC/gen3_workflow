@@ -658,8 +658,8 @@ class ParslGraph(dict):
 
     def clean_up_exec_butler_files(self):
         """Clean up the copies of the execution butler."""
-        temp_repo_dir = os.path.join(self.config['executionButlerTemplate'],
-                                     'tmp_repos')
+        temp_root = os.path.dirname(self.config['executionButlerTemplate'])
+        temp_repo_dir = os.path.join(temp_root, 'tmp_repos')
         if os.path.isdir(temp_repo_dir):
             shutil.rmtree(temp_repo_dir)
 
