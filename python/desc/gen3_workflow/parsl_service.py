@@ -2,6 +2,7 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+import sys
 import glob
 import shutil
 from collections import defaultdict
@@ -489,6 +490,17 @@ class ParslGraph(dict):
                                                  '*.qgraph'))[0]
             self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
         return self._qgraph
+
+    def copy_exec_butler_files(self):
+        exec_butler_dir = self.config['executionButlerDir']
+        job_names = [_ for _ in self if not _.endswith('_stage_exec_butler')]
+        num_jobs = len(job_names)
+        for i, job_name in enumerate(job_names):
+            if i % (num_jobs//20) == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            copy_exec_butler_files(exec_butler_dir, job_name)
+        print('!')
 
     def get_jobs(self, task_type, status='pending', query=None):
         """
