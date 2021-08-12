@@ -2,6 +2,7 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+import sys
 import glob
 import shutil
 from collections import defaultdict
@@ -490,6 +491,17 @@ class ParslGraph(dict):
             self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
         return self._qgraph
 
+    def copy_exec_butler_files(self):
+        exec_butler_dir = self.config['executionButlerDir']
+        job_names = [_ for _ in self if not _.endswith('_stage_exec_butler')]
+        num_jobs = len(job_names)
+        for i, job_name in enumerate(job_names):
+            if i % (num_jobs//20) == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            copy_exec_butler_files(exec_butler_dir, job_name)
+        print('!')
+
     def get_jobs(self, task_type, status='pending', query=None):
         """
         Return a list of job names for the specified task applying an
@@ -658,8 +670,8 @@ class ParslGraph(dict):
 
     def clean_up_exec_butler_files(self):
         """Clean up the copies of the execution butler."""
-        temp_repo_dir = os.path.join(self.config['executionButlerTemplate'],
-                                     'tmp_repos')
+        temp_root = os.path.dirname(self.config['executionButlerTemplate'])
+        temp_repo_dir = os.path.join(temp_root, 'tmp_repos')
         if os.path.isdir(temp_repo_dir):
             shutil.rmtree(temp_repo_dir)
 
