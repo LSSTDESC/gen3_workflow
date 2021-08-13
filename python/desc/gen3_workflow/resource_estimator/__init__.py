@@ -1,1 +1,2 @@
-from .tabulate_pipe_task_resources import *
+from .tabulate_pipetask_resources import *
+
