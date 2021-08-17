@@ -1,6 +1,7 @@
 """
 Tabulate the computing resource usage for each DRP pipetask.
 """
+import time
 from collections import defaultdict
 import json
 import numpy as np
@@ -140,11 +141,12 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
     for task_name in ('assembleCoadd', 'detection', 'measure',
                       'forcedPhotCoadd'):
         if verbose:
-            print("processing", task_name)
+            print("processing", task_name, end=' ')
         pt_data['pipetask'].append(task_name)
         pt_data['num_instances'].append(len(coadd_df))
         cpu_hours_total = 0
         memory = []
+        t0 = time.time()
         for _, row in coadd_df.iterrows():
             num_visits = row[num_visit_col]
             cpu_hours, mem_GB = pipetask_funcs[task_name](num_visits)
@@ -153,6 +155,7 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         pt_data['cpu_hours'].append(cpu_hours_total)
         pt_data['max_GB'].append(np.max(memory))
         pt_data['avg_GB'].append(np.mean(memory))
+        print(time.time() - t0)
 
     for task_name in ('mergeCoaddDetections', 'deblend',
                       'mergeCoaddMeasurements'):
