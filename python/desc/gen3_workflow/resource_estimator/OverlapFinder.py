@@ -11,6 +11,7 @@ import pandas as pd
 import lsst.geom
 import lsst.sphgeom
 import lsst.log
+from lsst.afw.cameraGeom import DetectorType
 from lsst.obs.base.utils import createInitialSkyWcsFromBoresight
 from lsst.obs.lsst import LsstCamMapper
 
@@ -108,7 +109,8 @@ def wcs_from_boresight(ratel, dectel, rotangle, detector):
 
 class OverlapFinder:
     """Class to compute overlaps of sensor-visits with a sky map."""
-    def __init__(self, opsim_db_file, skymap_polygons, seed=42):
+    def __init__(self, opsim_db_file, skymap_polygons, seed=42,
+                 opsim_version=2, visit_range=None):
         """
         Parameters
         ----------
@@ -120,9 +122,22 @@ class OverlapFinder:
         seed : int [42]
             Seed for the random number generator.
         """
+        self.opsim_version = opsim_version
         with sqlite3.connect(opsim_db_file) as con:
-            self.opsim_db = pd.read_sql('select * from summary', con)
-        #self.camera = LsstCamMapper().camera if camera is None else camera
+            if opsim_version == 1:
+                query = ('select obsHistID, descDitheredRA, descDitheredDec, '
+                         'filter from summary')
+                if visit_range is not None:
+                    query += (f' where {visit_range[0]} <= obsHistID and '
+                              f'obsHistID <= {visit_range[1]}')
+                self.opsim_db = pd.read_sql(query, con)
+            elif opsim_version == 2:
+                query = ('select observationId, fieldRA, fieldDec, filter '
+                         'from observations')
+                if visit_range is not None:
+                    query += (f' where {visit_range[0]} <= observationId and '
+                              f'observationId <= {visit_range[1]}')
+                self.opsim_db = pd.read_sql(query, con)
         self.skymap_polygons = skymap_polygons
         self.rng = np.random.RandomState(seed)
 
@@ -145,13 +160,21 @@ class OverlapFinder:
         for i, visit in enumerate(visits):
             print(i, len(visits))
             sys.stdout.flush()
-            visit_info = self.opsim_db.query(f'obsHistID == {visit}').iloc[0]
-            ratel = visit_info['descDitheredRA']
-            dectel = visit_info['descDitheredDec']
+            if self.opsim_version == 1:
+                visit_info = self.opsim_db.query(f'obsHistID=={visit}').iloc[0]
+                ratel = visit_info['descDitheredRA']
+                dectel = visit_info['descDitheredDec']
+            elif self.opsim_version == 2:
+                visit_info \
+                    = self.opsim_db.query(f'observationId=={visit}').iloc[0]
+                ratel = np.radians(visit_info['fieldRA'])
+                dectel = np.radians(visit_info['fieldDec'])
             rotangle = self.rng.uniform(0, 2*np.pi)
 
             data = defaultdict(list)
             for detector in list(LSSTCAM):
+                if detector.getType() != DetectorType.SCIENCE:
+                    continue
                 wcs  = wcs_from_boresight(ratel, dectel, rotangle, detector)
                 bbox = detector.getBBox()
                 for tract, patches in \
