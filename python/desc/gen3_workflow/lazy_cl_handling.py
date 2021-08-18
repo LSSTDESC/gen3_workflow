@@ -27,7 +27,7 @@ def copy_exec_butler_files(exec_butler_dir, job_name, tmp_dirname='tmp_repos'):
     """Make a non-shared copy of the butler repo for each job."""
     dest_dir = os.path.join(os.path.dirname(exec_butler_dir), tmp_dirname,
                             job_name)
-    os.make_dirs(dest_dir, exist_ok=True)
+    os.makedirs(dest_dir, exist_ok=True)
     for src in glob.glob(os.path.join(exec_butler_dir, '*')):
         dest = os.path.join(dest_dir, os.path.basename(src))
         if not os.path.isfile(dest):
