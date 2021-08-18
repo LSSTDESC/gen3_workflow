@@ -2,6 +2,7 @@
 Parsl-based workflow management service plug-in for ctrl_bps.
 """
 import os
+import sys
 import glob
 import shutil
 from collections import defaultdict
@@ -21,7 +22,7 @@ from desc.gen3_workflow.config import load_parsl_config
 import parsl
 from .query_workflow import query_workflow, print_status, DRP_TASKS
 from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
-    insert_file_paths
+    insert_file_paths, copy_exec_butler_files
 
 
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob', 'ParslService']
@@ -220,6 +221,7 @@ class ParslJob:
         self._done = False
         self._status = _PENDING
         self.future = None
+        self._future_app = None
 
     def command_line(self):
         """Return the job command line to run in bash."""
@@ -258,7 +260,9 @@ class ParslJob:
         of its log file.
         """
         if not self._done:
-            if self.parent_graph.have_monitoring_info:
+            if self.future is None:
+                self._done = False
+            elif self.parent_graph.have_monitoring_info:
                 my_df = self.parent_graph.df.query(
                     f'job_name == "{self.gwf_job.name}"')
                 self._done = (not my_df.empty and
@@ -318,13 +322,17 @@ class ParslJob:
             # different tasks types.
             no_op_job.__name__ = self.gwf_job.label + '_no_op'
             self.future = no_op_job()
-        if self.future is None:
-            # Schedule the job by running the command line in the
-            # appropriate parsl.bash_app.
-            inputs = [_.get_future() for _ in self.prereqs]
-            my_run_command = get_run_command(self)
-            self.future = my_run_command(self.command_line(), inputs=inputs,
-                                         **self.log_files())
+        elif self.future is None:
+            if self._future_app is not None:
+                # Assuming here that self._future_apps have no prereqs.
+                self.future = self._future_app()
+            else:
+                # Schedule the job by running the command line in the
+                # appropriate parsl.bash_app.
+                inputs = [_.get_future() for _ in self.prereqs]
+                my_run_command = get_run_command(self)
+                self.future = my_run_command(self.command_line(), inputs=inputs,
+                                             **self.log_files())
         return self.future
 
     def have_outputs(self):
@@ -353,6 +361,13 @@ class ParslJob:
                 for _ in [(int(self.gwf_job.cmdvals['qgraphNodeId']),
                            self.gwf_job.cmdvals['qgraphId'])]]
 
+class StageExecButler:
+    def __init__(self, exec_butler_dir, job_name):
+        self.exec_butler_dir = exec_butler_dir
+        self.job_name = job_name
+
+    def __call__(self):
+        return copy_exec_butler_files(self.exec_butler_dir, self.job_name)
 
 class ParslGraph(dict):
     """
@@ -400,6 +415,14 @@ class ParslGraph(dict):
             # ingested into the ParslGraph.
             _ = self[job_name]
 
+            if self.config['executionButlerDir']:
+                # Add a jobs to stage execution butler files
+                file_staging_name = job_name + '_stage_exec_butler'
+                self[file_staging_name].add_dependency(self[job_name])
+                self[job_name].add_prereq(self[file_staging_name])
+                self[file_staging_name]._future_app = parsl.python_app(
+                    StageExecButler(self.config['executionButlerDir'], job_name))
+
             # Collect downstream dependencies and prerequisites for
             # each job.
             for successor_job in self.gwf.successors(job_name):
@@ -419,7 +442,7 @@ class ParslGraph(dict):
         current_jobs = set() if df.empty else set(df['job_name'])
         data = defaultdict(list)
         for job_name in self:
-            if job_name in current_jobs:
+            if job_name in current_jobs or job_name.endswith('stage_exec_butler'):
                 continue
             data['job_name'].append(job_name)
             data['task_type'].append(job_name.split('_')[1])
@@ -446,6 +469,8 @@ class ParslGraph(dict):
             except ValueError:
                 return value
         for job_name, job in self.items():
+            if job_name.endswith('_stage_exec_butler'):
+                continue
             md = {_: '' for _ in md_columns}
             for key, value in zip(md_columns, job_name.split('_')[1:]):
                 md[key] = int_cast(value)
@@ -465,6 +490,17 @@ class ParslGraph(dict):
                                                  '*.qgraph'))[0]
             self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
         return self._qgraph
+
+    def copy_exec_butler_files(self):
+        exec_butler_dir = self.config['executionButlerDir']
+        job_names = [_ for _ in self if not _.endswith('_stage_exec_butler')]
+        num_jobs = len(job_names)
+        for i, job_name in enumerate(job_names):
+            if i % (num_jobs//20) == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            copy_exec_butler_files(exec_butler_dir, job_name)
+        print('!')
 
     def get_jobs(self, task_type, status='pending', query=None):
         """
@@ -514,7 +550,10 @@ class ParslGraph(dict):
         from each of the named jobs in the generic_workflow.
         """
         if not job_name in self:
-            gwf_job = self.gwf.get_job(job_name)
+            try:
+                gwf_job = self.gwf.get_job(job_name)
+            except KeyError:
+                gwf_job = None
             super().__setitem__(job_name, ParslJob(gwf_job, self))
         return super().__getitem__(job_name)
 
@@ -631,8 +670,8 @@ class ParslGraph(dict):
 
     def clean_up_exec_butler_files(self):
         """Clean up the copies of the execution butler."""
-        temp_repo_dir = os.path.join(self.config['executionButlerTemplate'],
-                                     'tmp_repos')
+        temp_root = os.path.dirname(self.config['executionButlerTemplate'])
+        temp_repo_dir = os.path.join(temp_root, 'tmp_repos')
         if os.path.isdir(temp_repo_dir):
             shutil.rmtree(temp_repo_dir)
 
