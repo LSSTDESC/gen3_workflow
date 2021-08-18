@@ -12,13 +12,11 @@ payload:
 
 executionButler:
   whenCreate: "PREPARE"
-  createCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -b {butlerConfig} --input {inCollection} --output-run {outColl
-ection} --save-execution-butler {executionButlerDir} -g {qgraphFile}"
+  createCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -b {butlerConfig} --input {inCollection} --output-run {outCollection} --save-execution-butler {executionButlerDir} -g {qgraphFile}"
   whenMerge: "ALWAYS"
   implementation: JOB  # JOB, WORKFLOW
   concurrency_limit: db_limit
-  command1: "${DAF_BUTLER_DIR}/bin/butler --log-level=VERBOSE transfer-datasets  {executionButlerDir} {butlerConfig} --
-collections {outCollection}"
+  command1: "${DAF_BUTLER_DIR}/bin/butler --log-level=VERBOSE transfer-datasets  {executionButlerDir} {butlerConfig} --collections {outCollection}"
   command2: "${DAF_BUTLER_DIR}/bin/butler collection-chain {butlerConfig} {output} {outCollection} --mode=prepend"
 
 parsl_config:
