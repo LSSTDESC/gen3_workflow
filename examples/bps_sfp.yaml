@@ -2,14 +2,31 @@ includeConfigs:
   - ${GEN3_WORKFLOW_DIR}/examples/bps_drp_baseline.yaml
   - ${GEN3_WORKFLOW_DIR}/examples/bps_DC2-3828-y1_resources.yaml
 
-# Specifiy just single frame processing subsets
-pipelineYaml: ${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml#processCcd,skyCorrection,consolidateVisit
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml#isr,characterizeImage,calibrate"
 
 payload:
-  butlerConfig: ${PWD}/gen3-repo-tiny
   inCollection: LSSTCam-imSim/defaults
-  outCollection: shared/sfp_test/{timestamp}
-  dataQuery: skymap='DC2' and tract=3828 and patch=24
+  payloadName: sfp_DC2
+  butlerConfig: ${PWD}/gen3-3828-y1
+  dataQuery: "skymap='DC2' and tract=3828"
 
-# Specify the parsl config using a static module (deprecated).
-parslConfig: desc.gen3_workflow.config.thread_pool_config_4
+executionButler:
+  whenCreate: "PREPARE"
+  createCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -b {butlerConfig} --input {inCollection} --output-run {outColl
+ection} --save-execution-butler {executionButlerDir} -g {qgraphFile}"
+  whenMerge: "ALWAYS"
+  implementation: JOB  # JOB, WORKFLOW
+  concurrency_limit: db_limit
+  command1: "${DAF_BUTLER_DIR}/bin/butler --log-level=VERBOSE transfer-datasets  {executionButlerDir} {butlerConfig} --
+collections {outCollection}"
+  command2: "${DAF_BUTLER_DIR}/bin/butler collection-chain {butlerConfig} {output} {outCollection} --mode=prepend"
+
+parsl_config:
+  retries: 1
+  executor: ThreadPool
+  max_threads: 4
+  monitoring: true
+#  executor: WorkQueue
+#  provider: Local
+#  monitoring: false
+#  worker_options: "--memory=12000"
