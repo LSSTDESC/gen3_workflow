@@ -1,15 +1,18 @@
 """
 Tabulate the computing resource usage for each DRP pipetask.
 """
+import os
 import time
 from collections import defaultdict
 import json
 import numpy as np
 import pandas as pd
+from lsst.daf.butler import Butler, DimensionUniverse
+from lsst.pipe.base.graph import QuantumGraph
 
 
 __all__ = ['get_pipetask_resource_funcs', 'tabulate_pipetask_resources',
-           'total_node_hours']
+           'tabulate_data_product_sizes', 'total_node_hours']
 
 
 class PipetaskFunc:
@@ -173,6 +176,51 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         pt_data['avg_GB'].append(mem_GB)
 
     return pd.DataFrame(data=pt_data)
+
+
+def tabulate_data_product_sizes(qgraph_file, repo, collection):
+    """
+    Tabulate the mean sizes of data products listed in a QuantumGraph
+    using files in a given repo and collection.
+
+    Parameters
+    ----------
+    qgraph_file : str
+        QuantumGraph file produced by `pipetask qgraph`.
+    repo : str
+        Path to data repository.
+    collection : str
+        Collection in repo to use for finding example data products.
+
+    Returns
+    -------
+    dict(dict(tuple)) Outer dict keyed by task label, inner dicts keyed
+    by dataset type with tuple of (mean file size (GB), std file sizes (GB),
+    number of files in examples).
+    """
+    qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+
+    butler = Butler(repo, collections=[collection])
+    registry = butler.registry
+
+    # Traverse the QuantumGraph finding the dataset types associated
+    # with each task type.
+    dstypes = defaultdict(set)
+    for node in qgraph:
+        task = node.taskDef.label
+        for dstype in node.quantum.outputs:
+            dstypes[task].add(dstype.name)
+
+    # Loop over task types and query for each dataset types and
+    # compute mean and stdev file sizes for each dataset type.
+    data = defaultdict(dict)
+    for task, dstypes in dstypes.items():
+        for dstype in dstypes:
+            file_sizes = [os.stat(butler.getURI(_).path).st_size/1024**3
+                          for _ in registry.queryDatasets(dstype)]
+            data[task][dstype] = (np.nanmean(file_sizes), np.nanstd(file_sizes),
+                                  len(file_sizes))
+    return data
 
 
 def total_node_hours(pt_df, cpu_factor=8, cores_per_node=68,
