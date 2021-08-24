@@ -421,7 +421,8 @@ class ParslGraph(dict):
                 self[file_staging_name].add_dependency(self[job_name])
                 self[job_name].add_prereq(self[file_staging_name])
                 self[file_staging_name]._future_app = parsl.python_app(
-                    StageExecButler(self.config['executionButlerDir'], job_name))
+                    StageExecButler(self.config['executionButlerDir'], job_name),
+                    executors=['submit-node'])
 
             # Collect downstream dependencies and prerequisites for
             # each job.
