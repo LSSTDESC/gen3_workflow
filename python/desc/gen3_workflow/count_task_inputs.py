@@ -15,9 +15,11 @@ __all__ = ['count_task_inputs']
 def count_task_inputs(qgraph_file, task_label='assembleCoadd',
                       input_type='deepCoadd_directWarp'):
     """
-    Return a dataframe with the numbers input datasets of specified
-    dataset types going into the output data products of the specified
-    task as determined from the QuantumGraph in the qgraph_file.
+    Gather information on the numbers of input datasets of the
+    specified dataset type going into the output data products of the
+    specified task as determined from the QuantumGraph in the
+    qgraph_file.  Also, count the number of instances per task type in
+    the QuantumGraph.
 
     Parameters
     ----------
@@ -32,12 +34,15 @@ def count_task_inputs(qgraph_file, task_label='assembleCoadd',
 
     Returns
     -------
-    pandas.DataFrame with rows indexed by the task dataId.
+    (pandas.DataFrame with rows indexed by the task dataId,
+    dict containing the numbers of instance for each task type)
     """
     qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
 
     data = defaultdict(list)
+    task_counts = defaultdict(lambda: 0)
     for i, node in enumerate(qgraph):
+        task_counts[node.taskDef.label] += 1
         if node.taskDef.label == task_label:
             dataId = node.quantum.dataId
             for dim in dataId:
@@ -46,4 +51,4 @@ def count_task_inputs(qgraph_file, task_label='assembleCoadd',
                 if dstype.name == input_type:
                     data[f'num_{input_type}'].append(len(dsrefs))
                     break
-    return pd.DataFrame(data=data)
+    return pd.DataFrame(data=data), task_counts
