@@ -5,10 +5,19 @@ includeConfigs:
 pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
 
 payload:
-  payloadName: drp_DC2
-  butlerConfig: ${PWD}/gen3-repo-tiny
   inCollection: LSSTCam-imSim/defaults
-  dataQuery: "skymap='DC2' and tract=3828 and patch=24"
+  payloadName: drp_DC2
+  butlerConfig: ${PWD}/gen3-3828-y1
+  dataQuery: "skymap='DC2' and tract=3828"
+
+executionButler:
+  whenCreate: "PREPARE"
+  createCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask qgraph -b {butlerConfig} --input {inCollection} --output-run {outCollection} --save-execution-butler {executionButlerDir} -g {qgraphFile}"
+  whenMerge: "ALWAYS"
+  implementation: JOB  # JOB, WORKFLOW
+  concurrency_limit: db_limit
+  command1: "${DAF_BUTLER_DIR}/bin/butler --log-level=VERBOSE transfer-datasets  {executionButlerDir} {butlerConfig} --collections {outCollection}"
+  command2: "${DAF_BUTLER_DIR}/bin/butler collection-chain {butlerConfig} {output} {outCollection} --mode=prepend"
 
 parsl_config:
   retries: 1

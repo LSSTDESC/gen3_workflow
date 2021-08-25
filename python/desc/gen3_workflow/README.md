@@ -1,50 +1,140 @@
-## Using ctrl_bps and the Parsl-based plug-in to run Rubin Science Pipelines
+## Using ctrl_bps and the Parsl-based plug-in to run LSST Science Pipelines at NERSC
 
 ### Requirements
-* `lsst_distrib` `w_2021_03` or later*
+* `lsst_distrib` `w_2021_33` or later
+* `ndcctools`
 * `parsl`
 * `gen3_workflow`
 * A Gen3 repository
 
-### Software Set Up
-* For using the batch queues at NERSC, a CVMFS installation of `lsst_distrib` is recommended.  An `lsstsqre` shifter image cannot be used since the runtime environment on the submission node uses Slurm commands such as `sbatch` to interact with the NERSC batch queues and those commands are not available in those images.
-* If one is running locally on a single node, then a shifter image can be used.
-* Assuming the v1.0.0 version or later isn't already available, Parsl can be installed with `pip install parsl --user` in one's `~/.local` folder.
-* Finally, this `gen3_workflow` package is needed.  To install and set it up do
+### Software Installation and Set Up
+For using the batch queues at NERSC, a CVMFS installation of `lsst_distrib` is recommended.  An `lsstsqre` shifter image cannot be used since the runtime environment on the submission node uses Slurm commands such as `sbatch` to interact with the NERSC batch queues and those commands are not available in those images.  However, if one is running locally on a single node, then a shifter image can be used.
+
+To set-up the CVMFS installation of `lsst_distrib` do
+```
+$ source /cvmfs/sw.lsst.eu/linux-x86_64/lsst_distrib/w_2021_33/loadLSST.bash
+$ setup lsst_distrib
+$ export OMP_NUM_THREADS=1
+```
+Setting `OMP_NUM_THREADS=1` prevents code using the LINPACK libraries from using all available threads on a node.
+
+Since the LSST code currently uses python3.8, one should install a compatible version of `ndcctools`.  Since that package is installed with conda, and the CVMFS distributions are write-protected, it's useful to set up a local area to do that installation.  The following assumes that `lsst_distrib` has been set up:
+```
+$ wq_env=`pwd -P`/wq_env
+$ conda create --prefix ${wq_env}
+$ conda activate --stack ${wq_env}
+$ conda install -c conda-forge ndcctools=7.3.0=py38h4630a5e_0 --no-deps
+```
+The `--no-deps` option prevents conda from trying to replace various packages in the LSST distribution with more recent versions that are incompatible with the LSST code.
+
+Currently, one should use the `desc` branch of parsl, which can be installed with
+```
+$ pip install --prefix ${wq_env} --no-deps 'parsl[monitoring,workqueue] @ git+https://github.com/parsl/parsl@desc'
+```
+Because of the `--no-deps` option, several additional packages will then need to be installed separately:
+```
+$ pip install --prefix ${wq_env} typeguard tblib paramiko dill globus-sdk sqlalchemy_utils
+```
+With `ndcctools` and `parsl` installed like this, the `PYTHONPATH` and `PATH` environment variables need to be updated:
+```
+$ export PYTHONPATH=${wq_env}/lib/python3.8/site-packages:${PYTHONPATH}
+$ export PATH=${wq_env}/bin:${PATH}
+```
+If desired, existing installations can be used via
+```
+$ wq_env=/global/cscratch1/sd/jchiang8/desc/gen3_tests/wq_env_2021-08-24
+```
+Finally, the `gen3_workflow` package is needed.  To install and set it up, do
 ```
 $ git clone https://github.com/LSSTDESC/gen3_workflow.git
 $ cd gen3_workflow
 $ git checkout u/jchiang/gen3_scripts
 $ setup -r . -j
 ```
-Note that the `setup` command must be issued after setting up `lsst_distrib`.
+Note that this `setup` command must be issued after setting up `lsst_distrib`.
+
+### Setting up a user area in the gen3-3828-y1 repo
+From a local working directory, make a symlink from a local subfolder to the user area in the `gen3-3828-y1` repo.  Typically, one's user name is used for this folder name.  The pipeline outputs of your workflow runs will be written under that subfolder.
+```
+$ cd <working_dir>
+$ mkdir <user_name>
+$ ln -s ${PWD}/<user_name> /global/cscratch1/sd/jchiang8/desc/gen3_tests/w_2021_12/gen3-3828-y1/u/
+```
+It's convenient to make a local symlink to the `gen3-3829-y1` repo:
+```
+$ ln -s /global/cscratch1/sd/jchiang8/desc/gen3_tests/w_2021_12/gen3-3828-y1 .
+```
+Since the registry in this repo is backed by a postgres database, you'll need a file with db access credentials in your home directory at NERSC.  Contact [jchiang87](https://lsstc.slack.com/team/U2LRMHKJ5) in LSSTC Slack to obtain these.  Once everything is set up, you can check that the repo is accessible via the butler with:
+```
+$ butler query-collections gen3-3828-y1 --chains tree
+                      Name                            Type   
+-------------------------------------------------- -----------
+LSSTCam-imSim/raw/all                              RUN        
+LSSTCam-imSim/calib                                CALIBRATION
+LSSTCam-imSim/calib/unbounded                      RUN        
+LSSTCam-imSim/calib/20220806T000000Z               RUN        
+LSSTCam-imSim/calib/20220101T000000Z               RUN        
+LSSTCam-imSim/calib/20231201T000000Z               RUN        
+skymaps                                            RUN        
+ref_cat                                            RUN        
+LSSTCam-imSim/defaults                             CHAINED    
+  LSSTCam-imSim/raw/all                            RUN        
+  LSSTCam-imSim/calib                              CALIBRATION
+  skymaps                                          RUN        
+  ref_cat                                          RUN        
+shared/sfp_3828_y1/20210223T191036Z                RUN        
+shared/coadd_processing_3828_y1/20210319T055155Z   RUN        
+shared/drp_pg_test/20210408T150000Z                RUN        
+shared/drp_full_test/20210419T202408Z              RUN        
+shared/bfk/20210415T142710Z                        RUN        
+shared/drp_full_test/20210419T204856Z              RUN        
+shared/dia_test/20210420T181323Z                   RUN        
+shared/drp_3828/20210521T161048Z                   RUN        
+shared/drp_3828/20210521T201925Z                   RUN        
+u/jchiang/sfp_3828/20210525T153432Z                RUN        
+u/jchiang/coadd_multiband_3828/20210531T215629Z    RUN        
+u/jchiang/objectTables_3828/20210608T230612Z       RUN        
+shared/bfk/20210618T044003Z                        RUN        
+u/jchiang/calibrate_dm-30490_test/20210621T225054Z RUN        
+u/jchiang/sfp_3828-y1/20210805T011112Z             RUN        
+u/jchiang/sfp_3828-y1/20210805T031935Z             RUN        
+u/jchiang/sfp_3828-y1/20210806T223525Z             RUN        
+u/jchiang/sfp_3828-y1/20210810T000946Z             RUN        
+u/jchiang/sfp_3828-y1/20210811T031616Z             RUN        
+```
+This prints all of the collections in that repo.
 
 ### Editing the bps config file
-An example file is available [here](https://github.com/LSSTDESC/gen3_workflow/blob/u/jchiang/gen3_scripts/examples/bps_DRP.yaml).  The key entries that need to be modified are
+A couple of example files are available:  [bps_drp.yaml](../../../examples/bps_drp.yaml) is set up to run the full DRP pipeline, and [bps_sfp.yaml](../../../examples/bps_sfp.yaml) is set up for just the visit-level processing that's equivalent to running `processCcd.py` in Gen2.  In order to ensure that the outputs are written to the location given above, one should set the `operator` field at the top of the bps yaml file:
 ```
-payload:
-  butlerConfig: ${PWD}/gen3-repo
-  inCollection: LSSTCam-imSim/defaults
-  outCollection: shared/parsl_patch_test_{timestamp}
-  dataQuery: tract=3828 AND patch=24 AND skymap='DC2'
-
-parslConfig: desc.gen3_workflow.config.thread_pool_config_4
-#parslConfig: desc.gen3_workflow.config.thread_pool_config_32
-#parslConfig: desc.gen3_workflow.config.ht_debug_config
-#parslConfig: desc.gen3_workflow.config.knl_htx_config
+operator: <user_name>
 ```
-* `butlerConfig` should point to your Gen3 repo.
-* `inCollection` is the list of input collections.
-* `outCollection` is the name you give to your output collection.  The `{timestamp}` field ensures that unique collection names are assigned.
-* `dataQuery` is the data selection to be made.  The above example selects a single patch for processing using the `DC2` skymap.
-* `parslConfig` specifies which resources to use for running the pipetask jobs.  The two `thread_pool_confg`s specify a maximum of 4 and 32 concurrent threads to be used.  The `ht_debug_config` is configured to submit to the debug queue running on a Haswell node, and `knl_htx_config` uses Parsl's [`HighThroughputExecutor`](https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors) to submit to KNL batch queues at NERSC.
+It's also useful to edit the `parsl_config` section to specify the resources you wish to use:
+```
+parsl_config:
+  retries: 1
+  monitoring: true
+  checkpoint: false
+  executor: WorkQueue
+  provider: Local
+  nodes_per_block: 10
+  worker_options: "--memory=90000"
+```
+This will use the `WorkQueueExecutor` with a `LocalProvider` for 10 nodes with 90,000 MB of memory available per node; parsl monitoring is enabled and checkpointing is disabled.  Another possible configuration is
+```
+parsl_config:
+  retries: 1
+  monitoring: false
+  executor: ThreadPool
+  max_threads: 4
+```
 
 ### Running the Pipeline
-Running the pipeline code consists of entering
+The pipeline can be run from the command line with
 ```
-$ bps submit bps_DRP.yaml
+$ bps --no-log-tty submit bps_sfp.yaml
 ```
-where `bps_DRP.yaml` is the bps config file.   If you are using `ht_debug_config` or `knl_htx_config`, then a `runinfo` subdirectory will be created which contains Parsl log ouput.  The ctrl_bps code writes to a `submit` subdirectory which contains the QuantumGraph files that are used to run each quantum of processing and output logs that appear in a folder `submit/<outCollection>/logging`.
+where `bps_sfp.yaml` is the bps config file. The `--no-log-tty` option suppresses the echoing of the parsl log messages to the terminal by the LSST code.  The `ctrl_bps` code writes to a `submit/u/{operator}/{payloadName}/{timestamp}` subdirectory where the QuantumGraph file, the execution butler files, and other items are written, including log files for each job.
 
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
 
@@ -52,127 +142,42 @@ Note that parsl requires a running python instance, so the `bps submit` command 
 Since Parsl requires an active python instance, running pipelines usually works better doing so from a python prompt.  There's a helper function to enable that:
 ```
 >>> from desc.gen3_workflow import start_pipeline
+>>> graph = start_pipeline('bps_sfp.yaml')
+INFO 2021-08-18T14:13:13.613-07:00 ctrl.mpexec.cmdLineFwk ()(cmdLineFwk.py:578) - QuantumGraph contains 14028 quanta for 3 tasks, graph ID: '1629320853.0446935-17265'
 
->>> graph = start_pipeline('bps_DRP.yaml')
-INFO  2021-02-10T05:13:25.047Z ctrl.mpexec.cmdLineFwk ()(cmdLineFwk.py:528)- QuantumGraph contains 29 quanta for 13 tasks, graph ID: '1612933997.1458979-461'
-
-real	0m6.199s
-user	0m5.493s
-sys	0m0.532s
+real	0m28.674s
+user	0m25.054s
+sys	0m1.557s
 ```
-The `start_pipeline` function will initialize the pipeline and compute the QuantumGraph for the `pipelineYaml`, `butlerConfig`, `inCollection` and `dataQuery` that are specified in the bps config file, but it will not launch any jobs.   The `start_pipeline` function will return a `ParslGraph` object that allows one to control the execution of the pipeline and also provides ways to inspect the status of a running pipeline.
+The `start_pipeline` function will initialize the pipeline and compute the QuantumGraph for components given in the `payload` section of the bps config file, but it will not launch any jobs.   The `start_pipeline` function will return a `ParslGraph` object that allows one to control the execution of the pipeline and also provides ways to inspect the status of a running pipeline.  Depending on the complexity of the pipeline and on the number of inputs, the QuantumGraph and associated file generation can take many minutes to finish.
 
 One can obtain the overall status with
 ```
 >>> graph.status()
-task type                   pending  running  succeeded  failed  total
-
-isr                               5        0          0       0      5
-characterizeImage                 5        0          0       0      5
-calibrate                         5        0          0       0      5
-makeWarp                          1        0          0       0      1
-consolidateVisitSummary           1        0          0       0      1
-skyCorrectionTask                 5        0          0       0      5
-measure                           1        0          0       0      1
-assembleCoadd                     1        0          0       0      1
-detection                         1        0          0       0      1
-forcedPhotCoadd                   1        0          0       0      1
-deblend                           1        0          0       0      1
-mergeDetections                   1        0          0       0      1
-mergeMeasurements                 1        0          0       0      1
+task_type                    pending   launched    running  exec_done     failed   dep_fail      total
+isr                             4676          0          0          0          0          0       4676
+characterizeImage               4676          0          0          0          0          0       4676
+calibrate                       4676          0          0          0          0          0       4676
 ```
 Here we see the different types of tasks (as given by the task labels in the pipeline yaml file), and the execution state of each task or job.
 
-The `ParslGraph` object has a reference to the `BpsConfig` object that contains the values set in the bps config file.  For this example, the `dataQuery` value shows that we are processing data from a single visit that overlaps with a particular patch:
+The `ParslGraph` object has a reference to the `BpsConfig` object that contains the values set in the bps config file.  For this example, the `dataQuery` value shows that we are processing data for a single tract in the DC2 skymap:
 ```
 >>> print(graph.config['dataQuery'])
-tract=3828 AND patch=24 AND skymap='DC2' AND visit=192355
+skymap='DC2' and tract=3828
 ```
+Before running any jobs, it may be desireable to "pre-stage" the execution butler files associated with each job.  This is done with
+```
+>>> graph.copy_exec_butler_files()
+```
+If you skip this step, then the execution butler files will be copied by parsl jobs that are prerequisites for each DRP pipetask job.  Running this way can have the side-effect of throttling the submission of the DRP pipetask jobs.
 To run the full pipeline, just call the `run` command:
 ```
 >>> graph.run()
 ```
-This function traverses the full pipeline DAG, assigns each job to specific resources, passes the dependences to Parsl, and Parsl manages the job executions using the specified resources.
+This function traverses the full pipeline DAG, sets resource requests for each job, passes the dependencies to parsl, and parsl manages the job executions using the requested resources.
 
 While the jobs are running, one can print the pipeline status at any time:
 ```
 >>> graph.status()
-task type                   pending  running  succeeded  failed  total
-
-isr                               0        1          4       0      5
-characterizeImage                 2        3          0       0      5
-calibrate                         5        0          0       0      5
-consolidateVisitSummary           1        0          0       0      1
-makeWarp                          1        0          0       0      1
-skyCorrectionTask                 5        0          0       0      5
-measure                           1        0          0       0      1
-assembleCoadd                     1        0          0       0      1
-forcedPhotCoadd                   1        0          0       0      1
-detection                         1        0          0       0      1
-mergeDetections                   1        0          0       0      1
-deblend                           1        0          0       0      1
-mergeMeasurements                 1        0          0       0      1
 ```
-
-#### Saving state and restarting pipelines
-Each time `start_pipeline` is called, it generates a new pipeline instance, and it uses the `outCollection` parameter to set the location of the QuantumGraph files it writes for each job, and it uses that collection name in the registry of the data repository.  Database conflicts will occur if a pipeline instance tries to reuse an existing collection name, so the `outCollection` values can use the `timestamp` variable to ensure that the output collection names are unique, e.g., in our example bps yaml config file, we have
-```
-  outCollection: shared/parsl_3828_24_192355/{timestamp}
-```
-and this will produce a unique collection name:
-```
->>> print(graph.config['outCollection'])
-shared/parsl_3828_24_192355/20210210T051311Z
-```
-
-However, if the python session terminates before the pipeline jobs finish, we need a way of recovering that pipeline instance without re-initializing the full pipeline.  We can do this by saving the config attribute of the `ParslGraph` object as a pickle file:
-```
->>> graph.save_config('drp_3828_24_192355.pickle')
-```
-This can be done at any time while the pipeline is running, but it's useful to do it as soon as the `start_pipeline` function returns the `ParslGraph` object.
-
-The `ParslGraph` associated with that pickled config can restored in a new python session:
-```
->>> from desc.gen3_workflow import ParslGraph
->>> graph = ParslGraph.restore('drp_3828_24_192355.pickle')
-```
-Since the pipeline state is saved on disk in the registry database, in the associate `ctrl_bps` files in the `submit` folder, and in the log file output, the status of the restored graph will reflect the state of the pipeline as it was encoded in those locations when the python session ended:
-```
->>> graph.status()
-task type                   pending  running  succeeded  failed  total
-
-isr                               0        0          5       0      5
-characterizeImage                 1        0          3       1      5
-calibrate                         5        0          0       0      5
-consolidateVisitSummary           1        0          0       0      1
-makeWarp                          1        0          0       0      1
-skyCorrectionTask                 5        0          0       0      5
-measure                           1        0          0       0      1
-assembleCoadd                     1        0          0       0      1
-forcedPhotCoadd                   1        0          0       0      1
-detection                         1        0          0       0      1
-mergeDetections                   1        0          0       0      1
-deblend                           1        0          0       0      1
-mergeMeasurements                 1        0          0       0      1
-```
-The pipeline can be restarted from this point simply by issuing the `run` command again:
-```
->>> graph.run()
->>> graph.status()
-task type                   pending  running  succeeded  failed  total
-
-isr                               0        0          5       0      5
-characterizeImage                 0        1          3       1      5
-calibrate                         3        2          0       0      5
-consolidateVisitSummary           1        0          0       0      1
-makeWarp                          1        0          0       0      1
-skyCorrectionTask                 5        0          0       0      5
-measure                           1        0          0       0      1
-assembleCoadd                     1        0          0       0      1
-forcedPhotCoadd                   1        0          0       0      1
-detection                         1        0          0       0      1
-mergeDetections                   1        0          0       0      1
-deblend                           1        0          0       0      1
-mergeMeasurements                 1        0          0       0      1
-```
-Since some jobs may have terminated before finishing when the python instance stopped, they'll appear in the `running` state even though they aren't actually running, but eventually Parsl *will* execute any job that hasn't either finished successfully or failed with an error.
