@@ -23,17 +23,17 @@ Since the LSST code currently uses python3.8, one should install a compatible ve
 $ wq_env=`pwd -P`/wq_env
 $ conda create --prefix ${wq_env}
 $ conda activate --stack ${wq_env}
-$ conda install -c conda-forge ndcctools=7.2.14=py38h4630a5e_0 --no-deps
+$ conda install -c conda-forge ndcctools=7.3.0=py38h4630a5e_0 --no-deps
 ```
 The `--no-deps` option prevents conda from trying to replace various packages in the LSST distribution with more recent versions that are incompatible with the LSST code.
 
 Currently, one should use the `desc` branch of parsl, which can be installed with
 ```
-pip install --prefix ${wq_env} --no-deps 'parsl[monitoring,workqueue] @ git+https://github.com/parsl/parsl@desc'
+$ pip install --prefix ${wq_env} --no-deps 'parsl[monitoring,workqueue] @ git+https://github.com/parsl/parsl@desc'
 ```
 Because of the `--no-deps` option, several additional packages will then need to be installed separately:
 ```
-pip install --prefix ${wq_env} typeguard tblib paramiko dill globus-sdk sqlalchemy_utils
+$ pip install --prefix ${wq_env} typeguard tblib paramiko dill globus-sdk sqlalchemy_utils
 ```
 With `ndcctools` and `parsl` installed like this, the `PYTHONPATH` and `PATH` environment variables need to be updated:
 ```
@@ -42,7 +42,7 @@ $ export PATH=${wq_env}/bin:${PATH}
 ```
 If desired, existing installations can be used via
 ```
-$ wq_env=/global/cscratch1/sd/jchiang8/desc/gen3_tests/wq_env_2021-08-10
+$ wq_env=/global/cscratch1/sd/jchiang8/desc/gen3_tests/wq_env_2021-08-24
 ```
 Finally, the `gen3_workflow` package is needed.  To install and set it up, do
 ```
@@ -64,7 +64,7 @@ It's convenient to make a local symlink to the `gen3-3829-y1` repo:
 ```
 $ ln -s /global/cscratch1/sd/jchiang8/desc/gen3_tests/w_2021_12/gen3-3828-y1 .
 ```
-One can check that the repo is accessible via the butler with:
+Since the registry in this repo is backed by a postgres database, you'll need a file with db access credentials in your home directory at NERSC.  Contact [jchiang87](https://lsstc.slack.com/team/U2LRMHKJ5) in LSSTC Slack to obtain these.  Once everything is set up, you can check that the repo is accessible via the butler with:
 ```
 $ butler query-collections gen3-3828-y1 --chains tree
                       Name                            Type   
@@ -134,7 +134,7 @@ The pipeline can be run from the command line with
 ```
 $ bps --no-log-tty submit bps_sfp.yaml
 ```
-where `bps_sfp.yaml` is the bps config file. The `--no-log-tty` option suppresses the echoing of the parsl log messages to the terminal by the LSST code.  The `ctrl_bps` code writes to a `submit/u/{operator}/{payloadName}/{timestamp}` subdirectory where the QuantumGraph file, the execution bulter files, and other items are written, including log files for each job.
+where `bps_sfp.yaml` is the bps config file. The `--no-log-tty` option suppresses the echoing of the parsl log messages to the terminal by the LSST code.  The `ctrl_bps` code writes to a `submit/u/{operator}/{payloadName}/{timestamp}` subdirectory where the QuantumGraph file, the execution butler files, and other items are written, including log files for each job.
 
 Note that parsl requires a running python instance, so the `bps submit` command will continue running as long as the underlying pipeline is executing.
 
@@ -161,7 +161,7 @@ calibrate                       4676          0          0          0          0
 ```
 Here we see the different types of tasks (as given by the task labels in the pipeline yaml file), and the execution state of each task or job.
 
-The `ParslGraph` object has a reference to the `BpsConfig` object that contains the values set in the bps config file.  For this example, the `dataQuery` value shows that we are processing data from a single visit that overlaps with a particular patch:
+The `ParslGraph` object has a reference to the `BpsConfig` object that contains the values set in the bps config file.  For this example, the `dataQuery` value shows that we are processing data for a single tract in the DC2 skymap:
 ```
 >>> print(graph.config['dataQuery'])
 skymap='DC2' and tract=3828
