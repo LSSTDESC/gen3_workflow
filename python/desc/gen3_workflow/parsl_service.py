@@ -267,7 +267,7 @@ class ParslJob:
                     f'job_name == "{self.gwf_job.name}"')
                 self._done = (not my_df.empty and
                               my_df.iloc[0].status == _EXEC_DONE)
-            elif self.status == _SUCCEDED:
+            elif self.status == _SUCCEEDED:
                 self._done = True
         return self._done
 
