@@ -260,15 +260,15 @@ class ParslJob:
         of its log file.
         """
         if not self._done:
-            if self.future is None:
+            if self.gwf_job is None and self.future is None:
                 self._done = False
             elif self.parent_graph.have_monitoring_info:
                 my_df = self.parent_graph.df.query(
                     f'job_name == "{self.gwf_job.name}"')
                 self._done = (not my_df.empty and
                               my_df.iloc[0].status == _EXEC_DONE)
-            else:
-                self._done = (self.status == _SUCCEEDED)
+            elif self.status == _SUCCEDED:
+                self._done = True
         return self._done
 
     @property
