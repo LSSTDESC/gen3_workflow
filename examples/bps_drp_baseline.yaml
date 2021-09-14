@@ -3,19 +3,15 @@ campaign: DC2
 
 pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
 
-executionButler:
-  whenCreate: "PREPARE"
-
-pipetask:
-  # add "--no-versions" to default pipetaskInit
-  pipetaskInit:
-    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask --long-log run -b {butlerConfig} -i {inCollection} --output-run {outCollection} --init-only --register-dataset-types --qgraph {qgraphFile} --no-versions"
-
-parslConfig: desc.gen3_workflow.config.thread_pool_config_4
-
 commandPrepend: "time"
 
-#shifter_id: lsstsqre/centos:7-stack-lsst_distrib-w_2021_18
+parsl_config:
+  retries: 1
+  monitoring: true
+  executor: ThreadPool
+  max_threads: 4
+
+#shifter_id: lsstsqre/centos:7-stack-lsst_distrib-w_2021_37
 #commandPrepend: ">& echo `date -Iseconds -u`; shifter -E --image={shifter_id} ${GEN3_WORKFLOW_DIR}/scripts/cl_wrapper.sh"
 
 wmsServiceClass: desc.gen3_workflow.ParslService

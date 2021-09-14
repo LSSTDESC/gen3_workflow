@@ -1,0 +1,5 @@
+includeConfigs:
+  - ${CTRL_BPS_DIR}/doc/lsst.ctrl.bps/execution_butler.yaml
+
+executionButler:
+  whenCreate: "PREPARE"
