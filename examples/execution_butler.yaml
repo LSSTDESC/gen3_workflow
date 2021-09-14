@@ -3,9 +3,3 @@ includeConfigs:
 
 executionButler:
   whenCreate: "PREPARE"
-
-pipetask:
-  pipetaskInit:
-    # The following command omits --extend-run which does not work for
-    # the parsl plugin
-    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask {initPreCmdOpts} run -b {butlerConfig} -i {inCollection} -o {output} --output-run {outCollection} --qgraph {qgraphFile} --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId} --clobber-outputs --register-dataset-types --init-only {extraInitOptions}"

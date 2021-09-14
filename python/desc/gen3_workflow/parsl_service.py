@@ -577,10 +577,6 @@ class ParslGraph(dict):
            butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
             command = 'time ' + _cmdline(pipetaskInit)
-            # pipetaskInit needs to handle the butlerConfig differently
-            # than QG jobs since the execution butler doesn't yet exist.
-            command = command.replace('<FILE:butlerConfig>',
-                                      self.config['butlerConfig'])
             command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
