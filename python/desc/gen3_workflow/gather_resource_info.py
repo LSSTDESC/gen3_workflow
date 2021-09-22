@@ -59,11 +59,12 @@ def process_datarefs(datarefs, collections, butler, verbose=True):
                 sys.stdout.flush()
         yaml_file = butler.getURI(dataref, collections=collections).path
         data['task'].append(dataref.datasetType.name[:-len('_metadata')])
-        dataId = dict(dataref.dataId)
-        if 'visit' not in dataId and 'exposure' in dataId:
-            dataId['visit'] = dataId['exposure']
+        dataId = dataref.expanded(dataref.dataId).dataId
         for column in columns:
-            data[column].append(dataId.get(column, None))
+            if column == 'visit' and 'visit' not in dataId:
+                data[column].append(dataId.get('exposure', None))
+            else:
+                data[column].append(dataId.get(column, None))
         results = parse_metadata_yaml(yaml_file)
         data['cpu_time'].append(results.get('EndCpuTime', None))
         data['maxRSS'].append(results.get('MaxResidentSetSize', None))
