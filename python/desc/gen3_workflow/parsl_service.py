@@ -443,10 +443,12 @@ class ParslGraph(dict):
         current_jobs = set() if df.empty else set(df['job_name'])
         data = defaultdict(list)
         for job_name in self:
-            if job_name in current_jobs or job_name.endswith('stage_exec_butler'):
+            if (job_name in current_jobs or
+                job_name.endswith('stage_exec_butler')):
                 continue
             data['job_name'].append(job_name)
-            data['task_type'].append(job_name.split('_')[1])
+            task_type = job_name.lstrip('_').split('_')[0]
+            data['task_type'].append(task_type)
             data['status'].append(_PENDING)
         self.df = pd.concat((df, pd.DataFrame(data=data)))
         self.task_types = set(self.df['task_type'])

@@ -52,7 +52,8 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
         task_stderrs.add(row['task_stderr'])
         job_name = os.path.basename(row['task_stderr']).split('.')[0]
         data['job_name'].append(job_name)
-        data['task_type'].append(job_name.split('_')[1])
+        task_type = job_name.lstrip('_').split('_')[0]
+        data['task_type'].append(task_type)
         data['status'].append(row['task_status_name'])
     return pd.DataFrame(data=data)
 
