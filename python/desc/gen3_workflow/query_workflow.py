@@ -9,14 +9,12 @@ import numpy as np
 import pandas as pd
 
 
-__all__ = ['query_workflow', 'print_status', 'DRP_TASKS']
+__all__ = ['query_workflow', 'print_status', 'get_task_name']
 
 
-DRP_TASKS = tuple('isr characterizeImage calibrate skyCorrectionTask '
-                  'consolidateVisitSummary makeWarp selectGoodSeeingVisits '
-                  'assembleCoadd templateGen detection imageDifference '
-                  'mergeDetections deblend measure mergeMeasurements '
-                  'forcedPhotCoadd forcedPhotCcd forcedPhotDiffim'.split())
+def get_task_name(job_name):
+    """Extract the task name from the GenericWorkflowJob name."""
+    return job_name.lstrip('_').split('_')[0]
 
 
 def query_workflow(workflow_name, db_file='monitoring.db'):
@@ -52,37 +50,29 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
         task_stderrs.add(row['task_stderr'])
         job_name = os.path.basename(row['task_stderr']).split('.')[0]
         data['job_name'].append(job_name)
-        task_type = job_name.lstrip('_').split('_')[0]
+        task_type = get_task_name(job_name)
         data['task_type'].append(task_type)
         data['status'].append(row['task_status_name'])
     return pd.DataFrame(data=data)
 
 
-def print_status(df, task_types=DRP_TASKS):
+def print_status(df, task_types=None):
     """
     Given a dataframe from `query_workflow(...)` and a list of task types,
     print the numbers of each task types for each status value.
     """
-    task_types = list(task_types)
-    # Get the task type names from the dataframe.
-    actual_task_types = set(df['task_type'])
-    if task_types[0] == 'discover':
-        # Use the discovered task types and sort.
-        task_types = sorted(list(actual_task_types))
-    # Make sure task_types list includes all actual task types.
-    task_types.extend(actual_task_types.difference(task_types))
+    if task_types is None:
+        task_types = sorted(list(set(df['task_type'])))
 #    statuses = ('pending launched running running_ended exec_done '
 #                'failed dep_fail'.split())
     statuses = 'pending launched running exec_done failed dep_fail'.split()
     spacer = ' '
-    print(f'{"task_type":25}', end=spacer)
+    print(f'{"task_type":28}', end=spacer)
     for status in statuses:
         print(f'{status:>10}', end=spacer)
     print(f'{"total":>10}')
     for task_type in task_types:
-        if task_type not in actual_task_types:
-            continue
-        print(f'{task_type:25}', end=spacer)
+        print(f'{task_type:28}', end=spacer)
         df1 = df.query(f'task_type == "{task_type}"')
         for status in statuses:
             df2 =  df1.query(f'status == "{status}"')

@@ -20,7 +20,7 @@ from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
 from desc.gen3_workflow.config import load_parsl_config
 import parsl
-from .query_workflow import query_workflow, print_status, DRP_TASKS
+from .query_workflow import query_workflow, print_status, get_task_name
 from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
     insert_file_paths, copy_exec_butler_files
 
@@ -79,6 +79,7 @@ _SUCCEEDED = 'succeeded'
 _FAILED = 'failed'
 _EXEC_DONE = 'exec_done'
 
+
 def run_command(command_line, inputs=(), stdout=None, stderr=None):
     """
     Run a command line as a parsl.bash_app.
@@ -90,6 +91,7 @@ RUN_COMMANDS = dict(small=small_bash_app(run_command),
                     medium=medium_bash_app(run_command),
                     large=large_bash_app(run_command),
                     local=local_bash_app(run_command))
+
 
 class ResourceSpecs:
     """
@@ -407,10 +409,14 @@ class ParslGraph(dict):
 
     def _ingest(self):
         """Ingest the workflow as ParslJobs."""
+        self._task_list = []
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
 
+            task_name = get_task_name(job_name)
+            if task_name not in self._task_list:
+                self._task_list.append(task_name)
             # Make sure pipelines without downstream dependencies are
             # ingested into the ParslGraph.
             _ = self[job_name]
@@ -447,11 +453,10 @@ class ParslGraph(dict):
                 job_name.endswith('stage_exec_butler')):
                 continue
             data['job_name'].append(job_name)
-            task_type = job_name.lstrip('_').split('_')[0]
+            task_type = get_task_name(job_name)
             data['task_type'].append(task_type)
             data['status'].append(_PENDING)
         self.df = pd.concat((df, pd.DataFrame(data=data)))
-        self.task_types = set(self.df['task_type'])
         self.have_monitoring_info = True
 
     def _update_status_from_logs(self):
@@ -460,7 +465,6 @@ class ParslGraph(dict):
         job metadata using the task log files.
         """
         import pandas as pd
-        self.task_types = []
         data = defaultdict(list)
         _, template_id = self.config.search('templateDataId',
                                             opt=dict(replaceVars=False))
@@ -479,8 +483,6 @@ class ParslGraph(dict):
                 md[key] = int_cast(value)
             for key, value in md.items():
                 data[key].append(value)
-            if data['task_type'][-1] not in self.task_types:
-                self.task_types.append(data['task_type'][-1])
             data['job_name'].append(job_name)
             data['status'].append(job.status)
         self.df = pd.DataFrame(data=data)
@@ -522,18 +524,14 @@ class ParslGraph(dict):
         if not use_logs:
             try:
                 self._update_status()
-                task_types = [_ for _ in DRP_TASKS if _ in self.task_types]
-                for item in self.task_types:
-                    if item not in task_types:
-                        task_types.append(item)
-                print_status(self.df, task_types)
+                print_status(self.df, self._task_list)
                 return
             except FileNotFoundError:
                 pass
         self._update_status_from_logs()
         summary = ['task type                '
                    'pending  scheduled  running  succeeded  failed  total\n']
-        for task_type in self.task_types:
+        for task_type in self._task_list:
             my_df = self.df.query(f'task_type == "{task_type}"')
             num_tasks = len(my_df)
             num_pending = len(my_df.query(f'status == "{_PENDING}"'))
