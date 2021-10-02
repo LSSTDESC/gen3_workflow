@@ -1,6 +1,9 @@
 project: DESC
 campaign: DC2
 
+executionButler:
+  whenCreate: "PREPARE"
+
 pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
 
 commandPrepend: "time"
