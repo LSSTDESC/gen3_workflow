@@ -9,6 +9,7 @@ from parsl.launchers import SrunLauncher
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.addresses import address_by_hostname
 from parsl.utils import get_all_checkpoints
+from lsst.ctrl.bps import BpsConfig
 import lsst.utils
 
 
@@ -119,8 +120,7 @@ def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
 
 def load_parsl_config(bps_config):
     """Load the parsl config using the options in bps_config."""
-    # Load a module-based config.
-    if not bps_config['parsl_config']:
+    if not isinstance(bps_config['parslConfig'], BpsConfig):
         return lsst.utils.doImport(bps_config['parslConfig']).DFK
 
     # Load using a runtime-configurable parsl config.
