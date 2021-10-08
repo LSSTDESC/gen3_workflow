@@ -23,10 +23,16 @@ def fix_env_var_syntax(oldstr):
     return newstr
 
 
+def exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname):
+    """Construct the job-specific path for the non-shared copy of the
+    execution butler repo."""
+    return os.path.join(os.path.dirname(exec_butler_dir), tmp_dirname,
+                        job_name)
+
+
 def copy_exec_butler_files(exec_butler_dir, job_name, tmp_dirname='tmp_repos'):
     """Make a non-shared copy of the butler repo for each job."""
-    dest_dir = os.path.join(os.path.dirname(exec_butler_dir), tmp_dirname,
-                            job_name)
+    dest_dir = exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname)
     os.makedirs(dest_dir, exist_ok=True)
     for src in glob.glob(os.path.join(exec_butler_dir, '*')):
         dest = os.path.join(dest_dir, os.path.basename(src))
@@ -43,9 +49,8 @@ def get_input_file_paths(generic_workflow, job_name, tmp_dirname='tmp_repos'):
             job_name != 'pipetaskInit'):  # pipetaskInit needs special handling
             exec_butler_dir = os.path.dirname(item.src_uri) \
                 if item.src_uri.endswith('butler.yaml') else item.src_uri
-            dest_dir = copy_exec_butler_files(exec_butler_dir, job_name,
-                                              tmp_dirname=tmp_dirname)
-            file_paths[item.name] = dest_dir
+            file_paths[item.name] \
+                = exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname)
         else:
             file_paths[item.name] = item.src_uri
     return file_paths
