@@ -421,7 +421,7 @@ class ParslGraph(dict):
             # ingested into the ParslGraph.
             _ = self[job_name]
 
-            if self.config['executionButlerDir']:
+            if os.path.isdir(self.config['executionButlerDir']):
                 # Add a jobs to stage execution butler files
                 file_staging_name = job_name + '_stage_exec_butler'
                 self[file_staging_name].add_dependency(self[job_name])
@@ -497,6 +497,11 @@ class ParslGraph(dict):
         return self._qgraph
 
     def copy_exec_butler_files(self):
+        """
+        Function to copy exec butler files en masse, rather than relying
+        on the auxiliary parsl jobs associated with each pipetask job.
+        This is usually called by hand in an interactive session.
+        """
         exec_butler_dir = self.config['executionButlerDir']
         job_names = [_ for _ in self if not _.endswith('_stage_exec_butler')]
         num_jobs = len(job_names)
@@ -657,6 +662,9 @@ class ParslGraph(dict):
             if (finalize and
                 self.config['executionButler']['whenCreate'] != 'NEVER'):
                 self.finalize()
+                # Clean up any remaining temporary copies of the execution
+                # butler repos
+                self.clean_up_exec_butler_files()
 
     def finalize(self):
         """Run final job to transfer datasets from the execution butler to
