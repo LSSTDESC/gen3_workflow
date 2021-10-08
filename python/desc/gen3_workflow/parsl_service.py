@@ -654,15 +654,18 @@ class ParslGraph(dict):
             _ = [future.result() for future in futures]
             # Since we're running non-interactively, run self.finalize()
             # to transfer datasets to the destination butler.
-            if finalize:
+            if (finalize and
+                self.config['executionButler']['whenCreate'] != 'NEVER'):
                 self.finalize()
 
     def finalize(self):
         """Run final job to transfer datasets from the execution butler to
         the destination repo butler."""
-        command = (f"bash {self.config['submitPath']}/final_job.bash "
+        log_file = os.path.join(self.config['submitPath'], 'logging',
+                                'final_merge_job.log')
+        command = (f"(bash {self.config['submitPath']}/final_job.bash "
                    f"{self.config['butlerConfig']} "
-                   f"{self.config['executionButlerTemplate']}")
+                   f"{self.config['executionButlerTemplate']}) >& {log_file}")
         subprocess.check_call(command, shell=True)
 
     def clean_up_exec_butler_files(self):
