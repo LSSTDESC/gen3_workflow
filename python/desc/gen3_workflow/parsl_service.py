@@ -629,7 +629,9 @@ class ParslGraph(dict):
             generic_workflow = pickle.load(fd)
 
         if parsl_config is not None:
-            if os.path.isfile(parsl_config):
+            if isinstance(parsl_config, dict):
+                config['parsl_config'] = parsl_config
+            elif os.path.isfile(parsl_config):
                 my_config = BpsConfig(parsl_config, BPS_SEARCH_ORDER)
                 config['parsl_config'] = my_config['parsl_config']
             else:
