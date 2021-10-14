@@ -22,7 +22,7 @@ from desc.gen3_workflow.config import load_parsl_config
 import parsl
 from .query_workflow import query_workflow, print_status, get_task_name
 from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
-    insert_file_paths, copy_exec_butler_files
+    insert_file_paths
 
 
 __all__ = ['start_pipeline', 'ParslGraph', 'ParslJob', 'ParslService']
@@ -223,7 +223,37 @@ class ParslJob:
         self._done = False
         self._status = _PENDING
         self.future = None
-        self._future_app = None
+
+    def exec_butler_command_line(self):
+        exec_butler_dir = self.config['executionButlerDir']
+        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
+                                  self.parent_graph.tmp_dirname,
+                                  self.gwf_job.name)
+        pipetask_cmd = _cmdline(self.gwf_job)
+        prefix = self.config.get('commandPrepend')
+        if prefix:
+            pipetask_cmd = ' '.join([prefix, pipetask_cmd])
+        pipetask_cmd \
+            = self.parent_graph.evaluate_command_line(pipetask_cmd, self.gwf_job)
+        my_command = f"""
+if [[ ! -d {target_dir} ]];
+then
+    mkdir {target_dir}
+fi
+cp {exec_butler_dir}/* {target_dir}/
+{pipetask_cmd}
+retcode=$?
+rm -rf {target_dir}
+if [[ $retcode != "0" ]];
+then
+    >&2 echo failure
+    false
+else
+    >&2 echo success
+    true
+fi
+"""
+        return my_command
 
     def command_line(self):
         """Return the job command line to run in bash."""
@@ -325,16 +355,16 @@ class ParslJob:
             no_op_job.__name__ = self.gwf_job.label + '_no_op'
             self.future = no_op_job()
         elif self.future is None:
-            if self._future_app is not None:
-                # Assuming here that self._future_apps have no prereqs.
-                self.future = self._future_app()
+            # Schedule the job by running the command line in the
+            # appropriate parsl.bash_app.
+            inputs = [_.get_future() for _ in self.prereqs]
+            my_run_command = get_run_command(self)
+            if os.path.isdir(self.config['executionButlerDir']):
+                command_line = self.exec_butler_command_line()
             else:
-                # Schedule the job by running the command line in the
-                # appropriate parsl.bash_app.
-                inputs = [_.get_future() for _ in self.prereqs]
-                my_run_command = get_run_command(self)
-                self.future = my_run_command(self.command_line(), inputs=inputs,
-                                             **self.log_files())
+                command_line = self.command_line()
+            self.future = my_run_command(command_line, inputs=inputs,
+                                         **self.log_files())
         return self.future
 
     def have_outputs(self):
@@ -363,14 +393,6 @@ class ParslJob:
                 for _ in [(int(self.gwf_job.cmdvals['qgraphNodeId']),
                            self.gwf_job.cmdvals['qgraphId'])]]
 
-class StageExecButler:
-    def __init__(self, exec_butler_dir, job_name):
-        self.exec_butler_dir = exec_butler_dir
-        self.job_name = job_name
-
-    def __call__(self):
-        return copy_exec_butler_files(self.exec_butler_dir, self.job_name)
-
 class ParslGraph(dict):
     """
     Class to generate ParslJob objects with dependencies specified in
@@ -398,6 +420,7 @@ class ParslGraph(dict):
         if do_init:
             self._pipetaskInit()
         self.dfk = dfk
+        self.tmp_dirname = 'tmp_repos'
         self._ingest()
         self._qgraph = None
         self.monitoring_db = './monitoring.db'
@@ -421,14 +444,10 @@ class ParslGraph(dict):
             # ingested into the ParslGraph.
             _ = self[job_name]
 
-            if os.path.isdir(self.config['executionButlerDir']):
-                # Add a jobs to stage execution butler files
-                file_staging_name = job_name + '_stage_exec_butler'
-                self[file_staging_name].add_dependency(self[job_name])
-                self[job_name].add_prereq(self[file_staging_name])
-                self[file_staging_name]._future_app = parsl.python_app(
-                    StageExecButler(self.config['executionButlerDir'], job_name),
-                    executors=['submit-node'])
+            exec_butler_dir = self.config['executionButlerDir']
+            if os.path.isdir(exec_butler_dir):
+                os.makedirs(os.path.join(os.path.dirname(exec_butler_dir),
+                                         self.tmp_dirname), exist_ok=True)
 
             # Collect downstream dependencies and prerequisites for
             # each job.
