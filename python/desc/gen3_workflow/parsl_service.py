@@ -373,7 +373,7 @@ fi
         If any outputs are missing, return False.
         """
         butler = Butler(self.config['butlerConfig'],
-                        run=self.config['outCollection'])
+                        run=self.config['outputRun'])
         registry = butler.registry
         for node in self.qgraph_nodes:
             for dataset_refs in node.quantum.outputs.values():
@@ -462,7 +462,7 @@ class ParslGraph(dict):
         """
         import pandas as pd
         # Get job status values from monitoring db.
-        df = query_workflow(self.config['outCollection'],
+        df = query_workflow(self.config['outputRun'],
                             db_file=self.monitoring_db)
         # Make entries for jobs that are not yet in the monitoring db.
         current_jobs = set() if df.empty else set(df['job_name'])
@@ -597,8 +597,7 @@ class ParslGraph(dict):
         """If the output collection isn't in the repo, run pipetaskInit."""
         butler = Butler(self.config['butlerConfig'])
         job_name = 'pipetaskInit'
-        if self.config['outCollection'] not in \
-           butler.registry.queryCollections():
+        if self.config['outputRun'] not in butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
             command = 'time ' + _cmdline(pipetaskInit)
             command = self.evaluate_command_line(command, pipetaskInit)
