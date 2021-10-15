@@ -14,7 +14,16 @@ __all__ = ['query_workflow', 'print_status', 'get_task_name']
 
 def get_task_name(job_name):
     """Extract the task name from the GenericWorkflowJob name."""
-    return job_name.lstrip('_').split('_')[0]
+    tokens = job_name.split('_')
+    try:
+        # Check if first token is an int, in which case the second token
+        # is the task_name
+        _ = int(tokens[0])
+    except ValueError:
+        # Use the first token as the task name, as would occur for quantum
+        # clustering.
+        return tokens[0]
+    return tokens[1]
 
 
 def query_workflow(workflow_name, db_file='monitoring.db'):

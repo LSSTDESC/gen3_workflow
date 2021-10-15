@@ -131,7 +131,7 @@ def load_parsl_config(bps_config):
     config = dict(bps_config['parsl_config'])
     config['retries'] = config.get('retries', 0)
     config['workflow_name'] \
-        = config.get('workflow_name', bps_config['outCollection'])
+        = config.get('workflow_name', bps_config['outputRun'])
 
     if config['executor'] == 'ThreadPool':
         return thread_pool_config(**config)
