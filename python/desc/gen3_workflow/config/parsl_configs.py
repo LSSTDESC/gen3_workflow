@@ -80,13 +80,13 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint):
 
 def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     log_level=logging.DEBUG, wq_max_retries=1,
+                     log_level=logging.DEBUG, wq_max_retries=1, port=9000,
                      **unused_options):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
     logger = logging.getLogger("parsl.executors.workqueue.executor")
     logger.setLevel(log_level)
 
-    executors = [WorkQueueExecutor(label='work_queue', port=9000,
+    executors = [WorkQueueExecutor(label='work_queue', port=port,
                                    shared_fs=True, provider=provider,
                                    worker_options=worker_options,
                                    autolabel=False,
