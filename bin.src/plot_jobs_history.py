@@ -107,3 +107,11 @@ for run_id, start_time in zip(run_ids, start_times):
     plt.ylabel('# concurrent jobs')
     plt.title(f'{args.workflow_name} {start_time}')
     plt.savefig(f'{args.workflow_name.replace("/", "_")}_{start_time}.png')
+
+    data = dict()
+    for task in tasks:
+        data[task] = bin_values[task]
+    data['time'] = (edges[:-1] + edges[1:])/2.
+    df = pd.DataFrame(data=data)
+    outfile = f'{args.workflow_name.replace("/", "_")}_{start_time}.pickle'
+    df.to_pickle(outfile)
