@@ -224,17 +224,28 @@ class ParslJob:
         self._status = _PENDING
         self.future = None
 
-    def exec_butler_command_line(self):
-        exec_butler_dir = self.config['executionButlerDir']
-        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
-                                  self.parent_graph.tmp_dirname,
-                                  self.gwf_job.name)
+    def command_line(self):
+        """Return the command line to run in bash."""
         pipetask_cmd = _cmdline(self.gwf_job)
         prefix = self.config.get('commandPrepend')
         if prefix:
             pipetask_cmd = ' '.join([prefix, pipetask_cmd])
         pipetask_cmd \
             = self.parent_graph.evaluate_command_line(pipetask_cmd, self.gwf_job)
+
+        exec_butler_dir = self.config['executionButlerDir']
+        if not os.path.isdir(exec_butler_dir):
+            # We're not using the execution butler so omit the file
+            # staging parts.
+            return (pipetask_cmd +
+                    ' && >&2 echo success || (>&2 echo failure; false)')
+
+        # Command line for the execution butler including lines to
+        # stage and un-stage the copies of the registry and
+        # butler.yaml file.
+        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
+                                  self.parent_graph.tmp_dirname,
+                                  self.gwf_job.name)
         my_command = f"""
 if [[ ! -d {target_dir} ]];
 then
@@ -254,15 +265,6 @@ else
 fi
 """
         return my_command
-
-    def command_line(self):
-        """Return the job command line to run in bash."""
-        command = _cmdline(self.gwf_job) \
-            + ' && >&2 echo success || (>&2 echo failure; false)'
-        prefix = self.config.get('commandPrepend')
-        if prefix:
-            command = ' '.join([prefix, command])
-        return self.parent_graph.evaluate_command_line(command, self.gwf_job)
 
     def add_dependency(self, dependency):
         """
@@ -359,10 +361,7 @@ fi
             # appropriate parsl.bash_app.
             inputs = [_.get_future() for _ in self.prereqs]
             my_run_command = get_run_command(self)
-            if os.path.isdir(self.config['executionButlerDir']):
-                command_line = self.exec_butler_command_line()
-            else:
-                command_line = self.command_line()
+            command_line = self.command_line()
             self.future = my_run_command(command_line, inputs=inputs,
                                          **self.log_files())
         return self.future
