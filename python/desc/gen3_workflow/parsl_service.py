@@ -224,17 +224,28 @@ class ParslJob:
         self._status = _PENDING
         self.future = None
 
-    def exec_butler_command_line(self):
-        exec_butler_dir = self.config['executionButlerDir']
-        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
-                                  self.parent_graph.tmp_dirname,
-                                  self.gwf_job.name)
+    def command_line(self):
+        """Return the command line to run in bash."""
         pipetask_cmd = _cmdline(self.gwf_job)
         prefix = self.config.get('commandPrepend')
         if prefix:
             pipetask_cmd = ' '.join([prefix, pipetask_cmd])
         pipetask_cmd \
             = self.parent_graph.evaluate_command_line(pipetask_cmd, self.gwf_job)
+
+        exec_butler_dir = self.config['executionButlerDir']
+        if not os.path.isdir(exec_butler_dir):
+            # We're not using the execution butler so omit the file
+            # staging parts.
+            return (pipetask_cmd +
+                    ' && >&2 echo success || (>&2 echo failure; false)')
+
+        # Command line for the execution butler including lines to
+        # stage and un-stage the copies of the registry and
+        # butler.yaml file.
+        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
+                                  self.parent_graph.tmp_dirname,
+                                  self.gwf_job.name)
         my_command = f"""
 if [[ ! -d {target_dir} ]];
 then
@@ -254,15 +265,6 @@ else
 fi
 """
         return my_command
-
-    def command_line(self):
-        """Return the job command line to run in bash."""
-        command = _cmdline(self.gwf_job) \
-            + ' && >&2 echo success || (>&2 echo failure; false)'
-        prefix = self.config.get('commandPrepend')
-        if prefix:
-            command = ' '.join([prefix, command])
-        return self.parent_graph.evaluate_command_line(command, self.gwf_job)
 
     def add_dependency(self, dependency):
         """
@@ -359,10 +361,7 @@ fi
             # appropriate parsl.bash_app.
             inputs = [_.get_future() for _ in self.prereqs]
             my_run_command = get_run_command(self)
-            if os.path.isdir(self.config['executionButlerDir']):
-                command_line = self.exec_butler_command_line()
-            else:
-                command_line = self.command_line()
+            command_line = self.command_line()
             self.future = my_run_command(command_line, inputs=inputs,
                                          **self.log_files())
         return self.future
@@ -437,17 +436,19 @@ class ParslGraph(dict):
             if job_name == 'pipetaskInit':
                 continue
 
+            # If using the execution butler, create a temp directory
+            # to contain copies of the exec butler repo.
+            exec_butler_dir = self.config['executionButlerDir']
+            if os.path.isdir(exec_butler_dir):
+                os.makedirs(os.path.join(os.path.dirname(exec_butler_dir),
+                                         self.tmp_dirname), exist_ok=True)
+
             task_name = get_task_name(job_name)
             if task_name not in self._task_list:
                 self._task_list.append(task_name)
             # Make sure pipelines without downstream dependencies are
             # ingested into the ParslGraph.
             _ = self[job_name]
-
-            exec_butler_dir = self.config['executionButlerDir']
-            if os.path.isdir(exec_butler_dir):
-                os.makedirs(os.path.join(os.path.dirname(exec_butler_dir),
-                                         self.tmp_dirname), exist_ok=True)
 
             # Collect downstream dependencies and prerequisites for
             # each job.
@@ -468,8 +469,7 @@ class ParslGraph(dict):
         current_jobs = set() if df.empty else set(df['job_name'])
         data = defaultdict(list)
         for job_name in self:
-            if (job_name in current_jobs or
-                job_name.endswith('stage_exec_butler')):
+            if job_name in current_jobs:
                 continue
             data['job_name'].append(job_name)
             task_type = get_task_name(job_name)
@@ -495,8 +495,6 @@ class ParslGraph(dict):
             except ValueError:
                 return value
         for job_name, job in self.items():
-            if job_name.endswith('_stage_exec_butler'):
-                continue
             md = {_: '' for _ in md_columns}
             for key, value in zip(md_columns, job_name.split('_')[1:]):
                 md[key] = int_cast(value)
@@ -514,22 +512,6 @@ class ParslGraph(dict):
                                                  '*.qgraph'))[0]
             self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
         return self._qgraph
-
-    def copy_exec_butler_files(self):
-        """
-        Function to copy exec butler files en masse, rather than relying
-        on the auxiliary parsl jobs associated with each pipetask job.
-        This is usually called by hand in an interactive session.
-        """
-        exec_butler_dir = self.config['executionButlerDir']
-        job_names = [_ for _ in self if not _.endswith('_stage_exec_butler')]
-        num_jobs = len(job_names)
-        for i, job_name in enumerate(job_names):
-            if i % (num_jobs//20) == 0:
-                sys.stdout.write('.')
-                sys.stdout.flush()
-            copy_exec_butler_files(exec_butler_dir, job_name)
-        print('!')
 
     def get_jobs(self, task_type, status='pending', query=None):
         """
