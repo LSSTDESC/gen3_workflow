@@ -1,0 +1,17 @@
+includeConfigs:
+  - ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/etc/bps_drp_baseline.yaml
+
+pipelineYaml: "${PWD}/cpBias.yaml"
+
+payload:
+  payloadName: bot_13035_R22_S11_cpBias
+  butlerConfig: test_repo
+  inCollection: LSSTCam/raw/all,LSSTCam/calib
+  dataQuery: "instrument='LSSTCam'"
+
+parsl_config:
+  retries: 0
+  monitoring: false
+  executor: WorkQueue
+  provider: Local
+  log_level: logging.WARNING
