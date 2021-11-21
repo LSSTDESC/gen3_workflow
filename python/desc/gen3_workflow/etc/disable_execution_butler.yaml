@@ -1,0 +1,6 @@
+executionButler:
+  whenCreate: "NEVER"
+
+pipetask:
+  pipetaskInit:
+    runQuantumCommand: "${CTRL_MPEXEC_DIR}/bin/pipetask {initPreCmdOpts} run -b {butlerConfig} -i {inCollection} -o {output} --output-run {outputRun} --qgraph {qgraphFile} --qgraph-id {qgraphId} --qgraph-node-id {qgraphNodeId} --clobber-outputs --init-only --register-dataset-types {extraInitOptions}"

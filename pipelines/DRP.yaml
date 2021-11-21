@@ -1,0 +1,65 @@
+description: The DRP pipeline specialized for imSim simulations of LSSTCam
+instrument: lsst.obs.lsst.LsstCamImSim
+imports:
+  - location: $PIPE_TASKS_DIR/pipelines/DRP.yaml
+tasks:
+  isr:
+    class: lsst.ip.isr.IsrTask
+    config:
+      doBrighterFatter: True
+      connections.newBFKernel: bfk
+  characterizeImage:
+    class: lsst.pipe.tasks.characterizeImage.CharacterizeImageTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/characterizeImage.py
+  calibrate:
+    class: lsst.pipe.tasks.calibrate.CalibrateTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/calibrate.py
+  #skyCorrectionTask: lsst.pipe.drivers.skyCorrection.SkyCorrectionTask
+  makeWarp:
+    class: lsst.pipe.tasks.makeCoaddTempExp.MakeWarpTask
+    config:
+      matchingKernelSize: 29
+      makePsfMatched: True
+      modelPsf.defaultFwhm: 7.7
+      doApplyExternalPhotoCalib: False
+      doApplyExternalSkyWcs: False
+      #doApplySkyCorr: True
+      doApplySkyCorr: False
+      doWriteEmptyWarps: True
+      python: config.warpAndPsfMatch.psfMatch.kernel['AL'].alardSigGauss = [1.0, 2.0, 4.5]
+  mergeDetections:
+    class: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
+  #deblend: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesSingleTask
+  measure:
+    class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
+    config:
+      file: $GEN3_WORKFLOW_DIR/config/measurement_filterMap.py
+  mergeMeasurements:
+    class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+    config:
+      priorityList: ["i", "r", "z", "y", "g", "u"]
+subsets:
+  processCcd:
+    subset:
+      - isr
+      - characterizeImage
+      - calibrate
+      #- skyCorrectionTask
+      - consolidateVisitSummary
+  multibandDia:
+    subset:
+      - detection
+      - mergeDetections
+      - deblend
+      - measure
+      - mergeMeasurements
+  forced:
+    subset:
+      - forcedPhotCcd
+      - forcedPhotCoadd
+      - forcedPhotDiffim
+    description: Forced photometry tasks.

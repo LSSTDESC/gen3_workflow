@@ -1,0 +1,17 @@
+includeConfigs:
+  - ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/etc/bps_drp_baseline.yaml
+#  - ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/etc/disable_execution_butler.yaml
+  - ${GEN3_WORKFLOW_DIR}/examples/bps_DC2-3828-y1_resources.yaml
+
+payload:
+  inCollection: LSSTCam-imSim/defaults
+  payloadName: drp_3828_24
+  butlerConfig: ${PWD}/gen3-3828-y1
+  dataQuery: "skymap='DC2' and tract=3828 and patch=24"
+
+#parsl_config:
+#  retries: 1
+#  monitoring: true
+#  executor: WorkQueue
+#  provider: Local
+#  worker_options: "--memory=12000"

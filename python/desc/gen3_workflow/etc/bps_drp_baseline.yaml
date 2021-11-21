@@ -1,0 +1,22 @@
+project: DESC
+campaign: DC2
+
+executionButler:
+  whenCreate: "PREPARE"
+
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/pipelines/DRP.yaml"
+
+commandPrepend: "time"
+
+parsl_config:
+  retries: 1
+  monitoring: true
+  executor: ThreadPool
+  max_threads: 4
+
+#shifter_id: lsstsqre/centos:7-stack-lsst_distrib-w_2021_37
+#commandPrepend: ">& echo `date -Iseconds -u`; shifter -E --image={shifter_id} ${GEN3_WORKFLOW_DIR}/scripts/cl_wrapper.sh"
+
+wmsServiceClass: desc.gen3_workflow.ParslService
+whenSaveJobQgraph: "NEVER"
+saveGenericWorkflow: true

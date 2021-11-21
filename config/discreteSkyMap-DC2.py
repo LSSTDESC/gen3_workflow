@@ -1,0 +1,9 @@
+config.skyMap.name = 'discrete'
+config.skyMap['discrete'].pixelScale = 0.2
+config.skyMap['discrete'].tractOverlap = 1./60
+config.skyMap['discrete'].projection = 'TAN'
+config.skyMap['discrete'].raList = [61.863]
+config.skyMap['discrete'].decList = [-35.790]
+config.skyMap['discrete'].radiusList = [10]
+config.skyMap['discrete'].patchInnerDimensions = [2000, 2000]
+config.name = 'DC2-discrete'
