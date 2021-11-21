@@ -676,7 +676,7 @@ class ParslGraph(dict):
         command = (f"(bash {self.config['submitPath']}/final_job.bash "
                    f"{self.config['butlerConfig']} "
                    f"{self.config['executionButlerTemplate']}) >& {log_file}")
-        subprocess.check_call(command, shell=True)
+        subprocess.check_call(command, shell=True, executable='/bin/bash')
 
     def clean_up_exec_butler_files(self):
         """Clean up the copies of the execution butler."""
