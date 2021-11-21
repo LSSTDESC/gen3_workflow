@@ -16,6 +16,16 @@ import lsst.utils
 __all__ = ['load_parsl_config']
 
 
+def set_parsl_logging(bps_config):
+    """Set parsl logging levels."""
+    config = dict(bps_config['parsl_config'])
+    parsl_log_level = config.get('log_level', 'logging.INFO')
+    loggers = [_ for _ in logging.root.manager.loggerDict
+               if _.startswith('parsl')]
+    for logger in loggers:
+        logging.getLogger(logger).setLevel(eval(parsl_log_level))
+
+
 def local_provider(nodes_per_block=1, **unused_options):
     """
     Factory function to provide a LocalProvider, with the option to
@@ -80,12 +90,8 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint):
 
 def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     log_level=logging.DEBUG, wq_max_retries=1, port=9000,
-                     **unused_options):
+                     wq_max_retries=1, port=9000, **unused_options):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
-    logger = logging.getLogger("parsl.executors.workqueue.executor")
-    logger.setLevel(log_level)
-
     executors = [WorkQueueExecutor(label='work_queue', port=port,
                                    shared_fs=True, provider=provider,
                                    worker_options=worker_options,
@@ -120,6 +126,9 @@ def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
 
 def load_parsl_config(bps_config):
     """Load the parsl config using the options in bps_config."""
+    set_parsl_logging(bps_config)
+
+    # Handle the case where parslConfig is set to a config module.
     if not isinstance(bps_config['parslConfig'], BpsConfig):
         return lsst.utils.doImport(bps_config['parslConfig']).DFK
 
@@ -145,7 +154,6 @@ def load_parsl_config(bps_config):
                            f"bps config: {config['provider']}")
 
     if config['executor'] == 'WorkQueue':
-        config['log_level'] = eval(config.get('log_level', 'logging.DEBUG'))
         try:
             config['wq_max_retries'] = int(config.get('wq_max_retries', 1))
         except ValueError:
