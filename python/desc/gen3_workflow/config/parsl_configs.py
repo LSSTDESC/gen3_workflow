@@ -135,8 +135,9 @@ def load_parsl_config(bps_config):
     log_level = set_parsl_logging(bps_config)
 
     # Handle the case where parslConfig is set to a config module.
-    if not isinstance(bps_config['parslConfig'], BpsConfig):
-        return lsst.utils.doImport(bps_config['parslConfig']).DFK
+    module_name = bps_config['parslConfig']
+    if module_name != "":
+        return lsst.utils.doImport(module_name).DFK
 
     # Load using a runtime-configurable parsl config.
     #
