@@ -22,8 +22,10 @@ def set_parsl_logging(bps_config):
     parsl_log_level = config.get('log_level', 'logging.INFO')
     loggers = [_ for _ in logging.root.manager.loggerDict
                if _.startswith('parsl')]
+    log_level = eval(parsl_log_level)
     for logger in loggers:
-        logging.getLogger(logger).setLevel(eval(parsl_log_level))
+        logging.getLogger(logger).setLevel(log_level)
+    return log_level
 
 
 def local_provider(nodes_per_block=1, **unused_options):
@@ -69,7 +71,8 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
     return SlurmProvider('None', **provider_options)
 
 
-def set_config_options(retries, monitoring, workflow_name, checkpoint):
+def set_config_options(retries, monitoring, workflow_name, checkpoint,
+                       monitoring_debug):
     """
     Package retries, monitoring, and checkpoint options for
     parsl.config.Config as a dict.
@@ -79,18 +82,20 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint):
         config_options['monitoring'] \
             = MonitoringHub(hub_address=address_by_hostname(),
                             hub_port=55055,
-                            monitoring_debug=False,
+                            monitoring_debug=monitoring_debug,
                             resource_monitoring_interval=60,
                             workflow_name=workflow_name)
     if checkpoint:
         config_options['checkpoint_mode'] = 'task_exit'
         config_options['checkpoint_files'] = get_all_checkpoints()
+
     return config_options
 
 
 def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     wq_max_retries=1, port=9000, **unused_options):
+                     wq_max_retries=1, port=9000, monitoring_debug=False,
+                     **unused_options):
     """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
     executors = [WorkQueueExecutor(label='work_queue', port=port,
                                    shared_fs=True, provider=provider,
@@ -100,7 +105,7 @@ def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
 
     config_options = set_config_options(retries, monitoring, workflow_name,
-                                        checkpoint)
+                                        checkpoint, monitoring_debug)
 
     config = parsl.config.Config(strategy='simple',
                                  garbage_collect=False,
@@ -114,19 +119,20 @@ def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
                        checkpoint=False, retries=1,
                        labels=('submit-node', 'batch-small',
                                'batch-medium', 'batch-large'),
+                       monitoring_debug=False,
                        **unused_options):
     """Load a parsl config using ThreadPoolExecutor."""
     executors = [ThreadPoolExecutor(max_threads=max_threads, label=label)
                  for label in labels]
     config_options = set_config_options(retries, monitoring, workflow_name,
-                                        checkpoint)
+                                        checkpoint, monitoring_debug)
     config = parsl.config.Config(executors=executors, **config_options)
     return parsl.load(config)
 
 
 def load_parsl_config(bps_config):
     """Load the parsl config using the options in bps_config."""
-    set_parsl_logging(bps_config)
+    log_level = set_parsl_logging(bps_config)
 
     # Handle the case where parslConfig is set to a config module.
     if not isinstance(bps_config['parslConfig'], BpsConfig):
@@ -138,6 +144,7 @@ def load_parsl_config(bps_config):
     # behavior of BpsConfig to return an empty string for missing keys
     # and to provide the dict.get method for handling default values.
     config = dict(bps_config['parsl_config'])
+    config['monitoring_debug'] = (log_level == logging.DEBUG)
     config['retries'] = config.get('retries', 0)
     config['workflow_name'] \
         = config.get('workflow_name', bps_config['outputRun'])
