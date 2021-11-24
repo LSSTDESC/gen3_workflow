@@ -1,14 +1,5 @@
 # The gen3_workflow package
 
-## Set-up and testing
-From bash
-```
-$ source <gen3_workflow install directory>/setup/setup.sh
-$ nosetests <gen3_workflow install directory>
-```
-
-## Demo
-
 ## People
 * [Jim Chiang](https://github.com/DarkEnergyScienceCollaboration/gen3_workflow/issues/new?body=@jchiang87) (SLAC)
 
