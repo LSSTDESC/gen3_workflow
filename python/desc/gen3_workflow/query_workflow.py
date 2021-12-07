@@ -72,16 +72,19 @@ def print_status(df, task_types=None):
     """
     if task_types is None:
         task_types = sorted(list(set(df['task_type'])))
+    wtt = 8
+    for task_type in task_types:
+        if len(task_type) > wtt: wtt = len(task_type)
 #    statuses = ('pending launched running running_ended exec_done '
 #                'failed dep_fail'.split())
     statuses = 'pending launched running exec_done failed dep_fail'.split()
     spacer = ' '
-    print(f'{"task_type":28}', end=spacer)
+    print(f'{"task_type":{wtt}}', end=spacer)
     for status in statuses:
         print(f'{status:>10}', end=spacer)
     print(f'{"total":>10}')
     for task_type in task_types:
-        print(f'{task_type:28}', end=spacer)
+        print(f'{task_type:{wtt}}', end=spacer)
         df1 = df.query(f'task_type == "{task_type}"')
         for status in statuses:
             df2 =  df1.query(f'status == "{status}"')
