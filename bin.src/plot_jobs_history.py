@@ -16,6 +16,9 @@ import pandas as pd
 parser = argparse.ArgumentParser()
 parser.add_argument('--workflow_name', type=str, default=None,
                     help='Name of workflow instance in the workflow table')
+parser.add_argument('--run_id', type=str, default=None,
+                    help=('Run id for the specified workflow. '
+                          'If None, then process all runs.'))
 parser.add_argument('--db_file', type=str, default='monitoring.db',
                     help='Name of monitoring db file')
 args = parser.parse_args()
@@ -26,9 +29,11 @@ if not os.path.isfile(args.db_file):
 if args.workflow_name is None:
     print(f'Available workflow names in {args.db_file}:')
     with sqlite3.connect(args.db_file) as conn:
-        query = 'select distinct workflow_name from workflow'
-        for workflow_name in pd.read_sql(query, conn)['workflow_name']:
-            print(' ', workflow_name)
+        query = 'select distinct workflow_name, run_id, time_began from workflow'
+        df = pd.read_sql(query, conn)
+        for workflow_name, run_id, time_began in \
+            zip(df['workflow_name'], df['run_id'], df['time_began']):
+            print(' ', workflow_name, run_id, time_began)
     sys.exit(0)
 
 
@@ -41,6 +46,8 @@ with sqlite3.connect(args.db_file) as conn:
                    for _ in df['time_began']]
 
 for run_id, start_time in zip(run_ids, start_times):
+    if args.run_id is not None and run_id != args.run_id:
+        continue
     query = f'''select task.task_stderr, status.task_status_name,
                 status.timestamp
                 from task join status on task.task_id=status.task_id and
