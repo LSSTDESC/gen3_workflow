@@ -26,6 +26,7 @@ def parse_metadata_yaml(yaml_file):
     results = dict()
     with open(yaml_file) as fd:
         md = yaml.safe_load(fd)
+        md = {} if md is None else md
     methods = list(md.keys())
     for method in methods:
         for key, value in md[method].items():
