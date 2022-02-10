@@ -12,17 +12,18 @@ import pandas as pd
 __all__ = ['query_workflow', 'print_status', 'get_task_name']
 
 
-def get_task_name(job_name):
+def get_task_name(job_name, bps_config):
     """Extract the task name from the GenericWorkflowJob name."""
+    # Get cluster names from any quantum clustering specification
+    # in the bps config yaml.
+    cluster_names = list(bps_config['cluster'].keys())
     tokens = job_name.split('_')
-    try:
-        # Check if first token is an int, in which case the second token
-        # is the task_name
-        _ = int(tokens[0])
-    except ValueError:
-        # Use the first token as the task name, as would occur for quantum
-        # clustering.
+    if tokens[0] in cluster_names:
+        # In case of quantum clustering, we use the cluster name as
+        # the task name.
         return tokens[0]
+    # If the tokens[0] is not in cluster_names, then tokens[1] is
+    # the base task name from the pipeline.
     return tokens[1]
 
 
