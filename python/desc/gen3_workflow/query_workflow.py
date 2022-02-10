@@ -12,18 +12,36 @@ import pandas as pd
 __all__ = ['query_workflow', 'print_status', 'get_task_name']
 
 
-def get_task_name(job_name, bps_config):
+def is_uuid(value):
+    """Check if the passed value is formatted like a UUID."""
+    sizes = tuple([len(_) for _ in value.split('-')])
+    return sizes == (8, 4, 4, 4, 12)
+
+
+def get_task_name(job_name, bps_config=None):
     """Extract the task name from the GenericWorkflowJob name."""
     # Get cluster names from any quantum clustering specification
     # in the bps config yaml.
-    cluster_names = list(bps_config['cluster'].keys())
     tokens = job_name.split('_')
-    if tokens[0] in cluster_names:
-        # In case of quantum clustering, we use the cluster name as
-        # the task name.
+    if bps_config is not None:
+        cluster_names = list(bps_config['cluster'].keys())
+        if tokens[0] in cluster_names:
+            # In case of quantum clustering, we use the cluster name as
+            # the task name.
+            return tokens[0]
+    # If bps_config is None or if the tokens[0] is not in
+    # cluster_names, then check if it is formatted like a uuid,
+    # in which case tokens[1] is the task name.
+    if is_uuid(tokens[0]):
+        return tokens[1]
+    # Finally, for backwards compatibility with weeklies prior to
+    # w_2022_01, check if tokens[0] can be cast as an int.  If not,
+    # then it's the cluster name.
+    try:
+        _ = int(tokens[0])
+    except ValueError:
         return tokens[0]
-    # If the tokens[0] is not in cluster_names, then tokens[1] is
-    # the base task name from the pipeline.
+
     return tokens[1]
 
 
