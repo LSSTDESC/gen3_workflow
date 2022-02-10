@@ -443,7 +443,7 @@ class ParslGraph(dict):
                 os.makedirs(os.path.join(os.path.dirname(exec_butler_dir),
                                          self.tmp_dirname), exist_ok=True)
 
-            task_name = get_task_name(job_name)
+            task_name = get_task_name(job_name, self.config)
             if task_name not in self._task_list:
                 self._task_list.append(task_name)
             # Make sure pipelines without downstream dependencies are
@@ -472,7 +472,7 @@ class ParslGraph(dict):
             if job_name in current_jobs:
                 continue
             data['job_name'].append(job_name)
-            task_type = get_task_name(job_name)
+            task_type = get_task_name(job_name, self.config)
             data['task_type'].append(task_type)
             data['status'].append(_PENDING)
         self.df = pd.concat((df, pd.DataFrame(data=data)))
