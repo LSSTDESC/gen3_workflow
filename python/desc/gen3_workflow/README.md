@@ -18,7 +18,7 @@ $ export OMP_NUM_THREADS=1
 ```
 Setting `OMP_NUM_THREADS=1` prevents code using the LINPACK libraries from using all available threads on a node.
 
-Since the LSST code currently uses python3.8, one should install a compatible version of `ndcctools`.  Since that package is installed with conda, and the CVMFS distributions are write-protected, it's useful to set up a local area to do that installation.  The following assumes that `lsst_distrib` has been set up:
+Since the LSST code currently uses python3.8, one should install a compatible version of `ndcctools`. Find the latest version of `ndcctools` compatible with the python version for the LSST stack. Since that package is installed with conda, and the CVMFS distributions are write-protected, it's useful to set up a local area to do that installation.  The following assumes that `lsst_distrib` has been set up:
 ```
 $ wq_env=`pwd -P`/wq_env
 $ conda create --prefix ${wq_env}
@@ -33,7 +33,7 @@ $ pip install --prefix ${wq_env} --no-deps 'parsl[monitoring,workqueue] @ git+ht
 ```
 Because of the `--no-deps` option, several additional packages will then need to be installed separately:
 ```
-$ pip install --prefix ${wq_env} typeguard tblib paramiko dill globus-sdk sqlalchemy_utils
+$ pip install --prefix ${wq_env} typeguard tblib paramiko dill globus-sdk sqlalchemy_utils zmq
 ```
 With `ndcctools` and `parsl` installed like this, the `PYTHONPATH` and `PATH` environment variables need to be updated:
 ```
@@ -48,7 +48,6 @@ Finally, the `gen3_workflow` package is needed.  To install and set it up, do
 ```
 $ git clone https://github.com/LSSTDESC/gen3_workflow.git
 $ cd gen3_workflow
-$ git checkout u/jchiang/gen3_scripts
 $ setup -r . -j
 ```
 Note that this `setup` command must be issued after setting up `lsst_distrib`.
@@ -127,6 +126,26 @@ parsl_config:
   monitoring: false
   executor: ThreadPool
   max_threads: 4
+```
+
+This is another example using PBSPro, with 16 nodes per block, 1 cpu per node (see https://parsl.readthedocs.io/en/stable/userguide/execution.html#blocks):
+```
+parsl_config:
+  retries: 0
+  monitoring: true
+  executor: WorkQueue
+  provider: PBSPro
+  nodes_per_block: 16
+  cpus_per_node: 1
+  parallelism: 1
+  init_blocks: 1
+  min_blocks: 16
+  max_blocks: 16
+  walltime: 48:00:00
+  worker_options: "--memory=90000"
+  # The worker_init command sets up the environment 
+  # science pipeline, wq_env, gen3_workflow
+  worker_init: "source ~/lsst_stack.sh"
 ```
 
 ### Running the Pipeline
