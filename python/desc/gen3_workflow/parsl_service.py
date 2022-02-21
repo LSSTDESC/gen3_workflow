@@ -658,7 +658,7 @@ class ParslGraph(dict):
             # this method until all the jobs have executed.  This is
             # needed for running in a non-interactive python process
             # that would otherwise end before the futures resolve.
-            _ = [future.result() for future in futures]
+            _ = [future.exception() for future in futures]
             # Since we're running non-interactively, run self.finalize()
             # to transfer datasets to the destination butler.
             if (finalize and
