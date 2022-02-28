@@ -17,7 +17,7 @@ from lsst.ctrl.bps.prepare import prepare
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
-    small_bash_app, medium_bash_app, large_bash_app, local_bash_app
+    bash_app_3G, bash_app_9G, bash_app_18G, bash_app_48G, bash_app_120G, local_bash_app
 from desc.gen3_workflow.config import load_parsl_config
 import parsl
 from .query_workflow import query_workflow, print_status, get_task_name
@@ -87,9 +87,11 @@ def run_command(command_line, inputs=(), stdout=None, stderr=None):
     return command_line
 
 
-RUN_COMMANDS = dict(small=small_bash_app(run_command),
-                    medium=medium_bash_app(run_command),
-                    large=large_bash_app(run_command),
+RUN_COMMANDS = dict(mem_3G=bash_app_3G(run_command),
+                    mem_9G=bash_app_9G(run_command),
+                    mem_18G=bash_app_18G(run_command),
+                    mem_48G=bash_app_48G(run_command),
+                    mem_120G=bash_app_120G(run_command),
                     local=local_bash_app(run_command))
 
 
@@ -166,21 +168,30 @@ def get_run_command(job):
 
     # Handle parsl configs with executors for different job_size values.
     memory_request = resource_spec['memory']/1024.   # convert to GB
-    job_size = 'large'   # Default value
-    try:
-        for key in ('batch-small', 'batch-medium'):
-            mem_per_worker = job.parent_graph.dfk.executors[key].mem_per_worker
-            if mem_per_worker is None:
-                # mem_per_worker is not set for this executor (and
-                # presumably also not for all of the others), so just
-                # use the default job_size.
-                break
-            if memory_request <= mem_per_worker:
-                job_size = key.split('-')[1]
-                break
-    except AttributeError:
-        # Using executors that don't have a mem_per_worker attribute.
-        pass
+#    job_size = 'large'   # Default value
+#    try:
+#        for key in ('batch-small', 'batch-medium'):
+#            mem_per_worker = job.parent_graph.dfk.executors[key].mem_per_worker
+#            if mem_per_worker is None:
+#                # mem_per_worker is not set for this executor (and
+#                # presumably also not for all of the others), so just
+#                # use the default job_size.
+#                break
+#            if memory_request <= mem_per_worker:
+#                job_size = key.split('-')[1]
+#                break
+#    except AttributeError:
+#        # Using executors that don't have a mem_per_worker attribute.
+#        pass
+    job_size = 'mem_3G'   # Default value
+    if memory_request > 3.:
+        job_size = 'mem_9G'
+        if memory_request > 9.:
+            job_size = 'mem_18G'
+            if memory_request > 18.:
+                job_size = 'mem_48G'
+                if memory_request > 48.:
+                    job_size = 'mem_120G'
     return RUN_COMMANDS[job_size]
 
 
