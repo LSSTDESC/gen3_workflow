@@ -254,9 +254,12 @@ class ParslJob:
         # Command line for the execution butler including lines to
         # stage and un-stage the copies of the registry and
         # butler.yaml file.
-        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
-                                  self.parent_graph.tmp_dirname,
-                                  self.gwf_job.name)
+#        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
+#                                  self.parent_graph.tmp_dirname,
+#                                  self.gwf_job.name)
+
+        target_dir = os.path.join("/tmp", self.gwf_job.name)
+
         my_command = f"""
 if [[ ! -d {target_dir} ]];
 then

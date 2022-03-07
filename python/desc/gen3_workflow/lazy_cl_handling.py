@@ -37,8 +37,11 @@ def get_input_file_paths(generic_workflow, job_name, tmp_dirname='tmp_repos'):
             job_name != 'pipetaskInit'):  # pipetaskInit needs special handling
             exec_butler_dir = os.path.dirname(item.src_uri) \
                 if item.src_uri.endswith('butler.yaml') else item.src_uri
-            file_paths[item.name] \
-                = exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname)
+#            file_paths[item.name] \
+#                = exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname)
+
+            file_paths[item.name]  = os.path.join("/tmp", job_name)
+
         else:
             file_paths[item.name] = item.src_uri
     return file_paths

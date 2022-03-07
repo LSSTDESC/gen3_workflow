@@ -10,11 +10,12 @@ from parsl.monitoring.monitoring import MonitoringHub
 
 from parsl.dataflow.rundirs import make_rundir
 
-run_dir='/sps/lsst/users/leboulch/bps/runinfo/'
+import os
+
+run_dir=os.path.join(os.environ['DP02_DIR'],'runinfo')
+
 subrun_dir = make_rundir(run_dir)
 logging_endpoint = "sqlite:///" + subrun_dir + "/monitoring.db"
-
-#initenv='source /pbs/home/l/leboulch/LSST/parsl/env_v23.0.1.rc3.sh'
 
 batch_3G = HighThroughputExecutor(
               label='batch-3G',
@@ -31,10 +32,9 @@ batch_3G = HighThroughputExecutor(
                 exclusive=False,
                 nodes_per_block=1,
                 init_blocks=0,
-                max_blocks=2500,
+                max_blocks=3000,
                 walltime="144:00:00",
                 scheduler_options='#SBATCH --mem 3G -L sps',
-#                worker_init=initenv,     # Input your worker_init if needed
                 ),
               )
 
@@ -56,7 +56,6 @@ batch_9G = HighThroughputExecutor(
                 max_blocks=1500,
                 walltime="144:00:00",
                 scheduler_options='#SBATCH --mem 9G -L sps',
-#                worker_init=initenv,     # Input your worker_init if needed
                 ),
               )
 
@@ -78,7 +77,6 @@ batch_18G = HighThroughputExecutor(
                 max_blocks=1000,
                 walltime="144:00:00",
                 scheduler_options='#SBATCH --mem 18G -L sps',
-#                worker_init=initenv,     # Input your worker_init if needed
                 ),
               )
 
@@ -100,7 +98,6 @@ batch_48G = HighThroughputExecutor(
                 max_blocks=500,
                 walltime="144:00:00",
                 scheduler_options='#SBATCH --mem 54G -L sps',
-#                worker_init=initenv,     # Input your worker_init if needed
                 ),
               )
 
@@ -143,7 +140,6 @@ batch_120G = HighThroughputExecutor(
                 max_blocks=50,
                 walltime="144:00:00",
                 scheduler_options='#$ -P P_lsst -l cvmfs=1,sps=1 -pe multicores 1 -q mc_highmem_huge',
-#                worker_init=initenv,     # Input your worker_init if needed
                 ),
               )
 
