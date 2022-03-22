@@ -258,7 +258,8 @@ class ParslJob:
 #                                  self.parent_graph.tmp_dirname,
 #                                  self.gwf_job.name)
 
-        target_dir = os.path.join("/tmp", self.gwf_job.name)
+#        target_dir = os.path.join("/tmp", self.gwf_job.name)
+        target_dir = os.path.join("$TMPDIR", self.gwf_job.name)
 
         my_command = f"""
 if [[ ! -d {target_dir} ]];
