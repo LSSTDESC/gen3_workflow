@@ -140,6 +140,7 @@ batch_120G = HighThroughputExecutor(
                 max_blocks=50,
                 walltime="144:00:00",
                 scheduler_options='#$ -P P_lsst -l cvmfs=1,sps=1 -pe multicores 1 -q mc_highmem_huge',
+                worker_init='source /pbs/throng/lsst/software/parsl/dp02-tools/env.sh',
                 ),
               )
 
