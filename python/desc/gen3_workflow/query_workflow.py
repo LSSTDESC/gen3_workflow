@@ -57,7 +57,8 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
         df = pd.read_sql('select * from workflow where '
                          f'workflow_name="{workflow_name}"', conn)
         if df.empty:
-            raise FileNotFoundError(f'workflow {workflow_name} not in {db_file}')
+            raise FileNotFoundError(f'workflow {workflow_name}'
+                                    'not in {db_file}')
     query = f'''select task.task_stderr, status.task_status_name,
                 status.timestamp
                 from task join status on task.task_id=status.task_id and
@@ -73,7 +74,9 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
     data = defaultdict(list)
     task_stderrs = set()
     for _, row in df0.iterrows():
-        if row['task_stderr'] in task_stderrs:
+        if (row['task_stderr'] in task_stderrs and
+           row['task_status_name'] != "exec_done" and
+           row['task_status_name'] != "failed"):
             continue
         task_stderrs.add(row['task_stderr'])
         job_name = os.path.basename(row['task_stderr']).split('.')[0]
@@ -81,7 +84,9 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
         task_type = get_task_name(job_name)
         data['task_type'].append(task_type)
         data['status'].append(row['task_status_name'])
-    return pd.DataFrame(data=data)
+    idx = np.array(data['status']) != "running_ended"
+    dfret = pd.DataFrame(data=data)[idx]
+    return dfret
 
 
 def print_status(df, task_types=None):
@@ -93,7 +98,8 @@ def print_status(df, task_types=None):
         task_types = sorted(list(set(df['task_type'])))
     wtt = 8
     for task_type in task_types:
-        if len(task_type) > wtt: wtt = len(task_type)
+        if len(task_type) > wtt:
+            wtt = len(task_type)
 #    statuses = ('pending launched running running_ended exec_done '
 #                'failed dep_fail'.split())
     statuses = 'pending launched running exec_done failed dep_fail'.split()
@@ -106,6 +112,6 @@ def print_status(df, task_types=None):
         print(f'{task_type:{wtt}}', end=spacer)
         df1 = df.query(f'task_type == "{task_type}"')
         for status in statuses:
-            df2 =  df1.query(f'status == "{status}"')
+            df2 = df1.query(f'status == "{status}"')
             print(f'{len(df2):10d}', end=spacer)
         print(f'{len(df1):10d}')

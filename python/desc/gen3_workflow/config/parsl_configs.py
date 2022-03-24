@@ -4,8 +4,9 @@ Module to perform runtime-specified loading of the parsl config.
 import logging
 import parsl
 from parsl.executors import WorkQueueExecutor, ThreadPoolExecutor
-from parsl.providers import LocalProvider, SlurmProvider
-from parsl.launchers import SrunLauncher
+from parsl.providers import LocalProvider, SlurmProvider, PBSProProvider
+from parsl.launchers import SrunLauncher, MpiExecLauncher
+from parsl.channels import LocalChannel
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.addresses import address_by_hostname
 from parsl.utils import get_all_checkpoints
@@ -43,7 +44,26 @@ def local_provider(nodes_per_block=1, **unused_options):
                             cmd_timeout=300)
     if nodes_per_block > 1:
         provider_options['launcher'] \
-            = SrunLauncher(overrides='-K0 -k --slurmd-debug=verbose')
+             = SrunLauncher(overrides='-K0 -k --slurmd-debug=verbose')
+    return LocalProvider(**provider_options)
+
+
+def local_pbspro_provider(nodes_per_block=1, **unused_options):
+    """
+    Factory function to provide a LocalPBSProProvider, with the option to
+    set the number of nodes to use.  If nodes_per_block > 1, then
+    use `launcher=MpiExecLauncher()`,
+    otherwise use the default, `launcher=SingleNodeLauncher()`.
+    """
+    provider_options = dict(nodes_per_block=nodes_per_block,
+                            init_blocks=0,
+                            min_blocks=0,
+                            max_blocks=1,
+                            parallelism=0,
+                            cmd_timeout=300)
+    if nodes_per_block > 1:
+        provider_options['launcher'] \
+            = MpiExecLauncher()
     return LocalProvider(**provider_options)
 
 
@@ -69,6 +89,31 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
                                 overrides='-K0 -k --slurmd-debug=verbose'),
                             cmd_timeout=300)
     return SlurmProvider('None', **provider_options)
+
+
+def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
+                    walltime='10:00:00', min_blocks=0, max_blocks=32, 
+                    init_blocks=1, worker_init=None, cpus_per_node=1,
+                    scheduler_options=None, **unused_options):
+    """Factory function to provide a PBSProProvider.
+    provider_options can include statements like:
+    scheduler_options = (f'#PBS \n'
+                         f'#PBS \n')
+    """
+    provider_options = dict(walltime=walltime,
+                            scheduler_options=scheduler_options,
+                            queue=qos,
+                            channel=LocalChannel(),
+                            nodes_per_block=nodes_per_block,
+                            worker_init = worker_init,
+                            cpus_per_node = cpus_per_node,
+                            init_blocks=init_blocks,
+                            min_blocks=min_blocks,
+                            max_blocks=max_blocks,
+                            parallelism=parallelism,
+                            launcher=MpiExecLauncher(),
+                            cmd_timeout=300)
+    return PBSProProvider(**provider_options)
 
 
 def set_config_options(retries, monitoring, workflow_name, checkpoint,
@@ -157,6 +202,10 @@ def load_parsl_config(bps_config):
         config['provider'] = slurm_provider(**config)
     elif config['provider'] == 'Local':
         config['provider'] = local_provider(**config)
+    elif config['provider'] == 'PBSPro':
+        config['provider'] = pbspro_provider(**config)
+    elif config['provider'] == 'LocalPBSPro':
+        config['provider'] = local_pbspro_provider(**config)
     else:
         raise RuntimeError("Unknown or unspecified provider in "
                            f"bps config: {config['provider']}")
