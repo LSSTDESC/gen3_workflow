@@ -33,13 +33,13 @@ batch_3G = HighThroughputExecutor(
                 nodes_per_block=1,
                 init_blocks=0,
                 max_blocks=3000,
-                walltime="144:00:00",
+                walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 3G -L sps',
                 ),
               )
 
-batch_9G = HighThroughputExecutor(
-              label='batch-9G',
+batch_6G = HighThroughputExecutor(
+              label='batch-6G',
               address=address_by_query(),
               worker_debug=False,
               poll_period=1000,
@@ -53,9 +53,9 @@ batch_9G = HighThroughputExecutor(
                 exclusive=False,
                 nodes_per_block=1,
                 init_blocks=0,
-                max_blocks=1500,
-                walltime="144:00:00",
-                scheduler_options='#SBATCH --mem 9G -L sps',
+                max_blocks=3000,
+                walltime="168:00:00",
+                scheduler_options='#SBATCH --mem 6G -L sps',
                 ),
               )
 
@@ -74,14 +74,14 @@ batch_18G = HighThroughputExecutor(
                 exclusive=False,
                 nodes_per_block=1,
                 init_blocks=0,
-                max_blocks=1000,
-                walltime="144:00:00",
+                max_blocks=500,
+                walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 18G -L sps',
                 ),
               )
 
-batch_48G = HighThroughputExecutor(
-              label='batch-48G',
+batch_54G = HighThroughputExecutor(
+              label='batch-54G',
               address=address_by_query(),
               worker_debug=False,
               poll_period=1000,
@@ -96,7 +96,7 @@ batch_48G = HighThroughputExecutor(
                 nodes_per_block=1,
                 init_blocks=0,
                 max_blocks=500,
-                walltime="144:00:00",
+                walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 54G -L sps',
                 ),
               )
@@ -158,7 +158,7 @@ monitor = MonitoringHub(
    )
 
 
-config = parsl.config.Config(executors=[batch_3G, batch_9G, batch_18G, batch_48G, batch_120G, local_executor],
+config = parsl.config.Config(executors=[batch_3G, batch_6G, batch_18G, batch_54G, batch_120G, local_executor],
                              app_cache=True,
                              retries=2,
                              strategy='htex_auto_scale',

@@ -17,7 +17,7 @@ from lsst.ctrl.bps.prepare import prepare
 from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
-    bash_app_3G, bash_app_9G, bash_app_18G, bash_app_48G, bash_app_120G, local_bash_app
+    bash_app_3G, bash_app_6G, bash_app_18G, bash_app_54G, bash_app_120G, local_bash_app
 from desc.gen3_workflow.config import load_parsl_config
 import parsl
 from .query_workflow import query_workflow, print_status, get_task_name
@@ -88,9 +88,9 @@ def run_command(command_line, inputs=(), stdout=None, stderr=None):
 
 
 RUN_COMMANDS = dict(mem_3G=bash_app_3G(run_command),
-                    mem_9G=bash_app_9G(run_command),
+                    mem_6G=bash_app_6G(run_command),
                     mem_18G=bash_app_18G(run_command),
-                    mem_48G=bash_app_48G(run_command),
+                    mem_54G=bash_app_54G(run_command),
                     mem_120G=bash_app_120G(run_command),
                     local=local_bash_app(run_command))
 
@@ -185,12 +185,12 @@ def get_run_command(job):
 #        pass
     job_size = 'mem_3G'   # Default value
     if memory_request > 3.:
-        job_size = 'mem_9G'
-        if memory_request > 9.:
+        job_size = 'mem_6G'
+        if memory_request > 6.:
             job_size = 'mem_18G'
             if memory_request > 18.:
-                job_size = 'mem_48G'
-                if memory_request > 48.:
+                job_size = 'mem_54G'
+                if memory_request > 54.:
                     job_size = 'mem_120G'
     return RUN_COMMANDS[job_size]
 
