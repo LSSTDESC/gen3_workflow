@@ -17,9 +17,8 @@ run_dir=os.path.join(os.environ['DP02_DIR'],'runinfo')
 subrun_dir = make_rundir(run_dir)
 logging_endpoint = "sqlite:///" + subrun_dir + "/monitoring.db"
 
-worker_port_range=(54000, 54050)
-interchange_port_range=(54051, 54100)
-hub_port=54501
+worker_port_range=(54000, 55000)
+interchange_port_range=(55001, 56000)
 
 batch_3G = HighThroughputExecutor(
               label='batch-3G',
@@ -158,7 +157,7 @@ local_executor = ThreadPoolExecutor(max_threads=16, label="submit-node")
 
 monitor = MonitoringHub(
        hub_address=address_by_query(),
-       hub_port=hub_port,
+#       hub_port=hub_port,
        logging_endpoint=logging_endpoint,
        monitoring_debug=False,
        resource_monitoring_enabled=False,
