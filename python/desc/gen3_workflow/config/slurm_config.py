@@ -36,6 +36,7 @@ batch_3G = HighThroughputExecutor(
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 3G -L sps',
                 ),
+              block_error_handler=False
               )
 
 batch_6G = HighThroughputExecutor(
@@ -57,6 +58,7 @@ batch_6G = HighThroughputExecutor(
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 6G -L sps',
                 ),
+              block_error_handler=False
               )
 
 batch_18G = HighThroughputExecutor(
@@ -78,6 +80,7 @@ batch_18G = HighThroughputExecutor(
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 18G -L sps',
                 ),
+              block_error_handler=False
               )
 
 batch_54G = HighThroughputExecutor(
@@ -99,6 +102,7 @@ batch_54G = HighThroughputExecutor(
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 54G -L sps',
                 ),
+              block_error_handler=False
               )
 
 #batch_120G = HighThroughputExecutor(
@@ -153,7 +157,7 @@ monitor = MonitoringHub(
        hub_port=54501,
        logging_endpoint=logging_endpoint,
        monitoring_debug=False,
-#       resource_monitoring_enabled=True,
+       resource_monitoring_enabled=False,
 #       resource_monitoring_interval=30,
    )
 
