@@ -80,9 +80,9 @@ def gather_resource_info(butler, dataId, collections=None, verbose=False,
     """
     registry = butler.registry
     pattern = re.compile(datatype_pattern)
-    datarefs = list(registry.queryDatasets(pattern, dataId=dataId,
-                                           findFirst=True,
-                                           collections=collections))
+    datarefs = list(set(registry.queryDatasets(pattern, dataId=dataId,
+                                               findFirst=True,
+                                               collections=collections)))
     nrefs = len(datarefs)
     if verbose:
         print(f'found {nrefs} datarefs')
