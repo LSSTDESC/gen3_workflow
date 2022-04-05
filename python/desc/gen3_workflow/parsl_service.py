@@ -258,8 +258,6 @@ class ParslJob:
 #                                  self.parent_graph.tmp_dirname,
 #                                  self.gwf_job.name)
 
-#        target_dir = os.path.join("/tmp", self.gwf_job.name)
-#        target_dir = os.path.join("$TMPDIR", self.gwf_job.name)
         exec_butler_dir_basename=os.path.basename(exec_butler_dir)
         target_dir = os.path.join("$TMPDIR",exec_butler_dir_basename)
         registry_file = os.path.join("$TMPDIR",exec_butler_dir_basename,"gen3.sqlite3")

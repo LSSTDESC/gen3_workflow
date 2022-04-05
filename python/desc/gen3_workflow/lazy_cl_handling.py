@@ -40,8 +40,6 @@ def get_input_file_paths(generic_workflow, job_name, tmp_dirname='tmp_repos'):
 #            file_paths[item.name] \
 #                = exec_butler_tmp_dir(exec_butler_dir, job_name, tmp_dirname)
 
-#            file_paths[item.name]  = os.path.join("/tmp", job_name)
-#            file_paths[item.name]  = os.path.join("$TMPDIR", job_name)
             exec_butler_dir_basename = os.path.basename(item.src_uri)
             file_paths[item.name]  = os.path.join("$TMPDIR", exec_butler_dir_basename)
 
