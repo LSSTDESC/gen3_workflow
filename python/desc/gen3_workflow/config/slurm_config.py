@@ -160,8 +160,8 @@ monitor = MonitoringHub(
 #       hub_port=hub_port,
        logging_endpoint=logging_endpoint,
        monitoring_debug=False,
-       resource_monitoring_enabled=False,
-#       resource_monitoring_interval=30,
+       resource_monitoring_enabled=True,
+       resource_monitoring_interval=600,
    )
 
 
