@@ -270,7 +270,6 @@ then
 fi
 {pipetask_cmd}
 retcode=$?
-rm -rf {target_dir}
 if [[ $retcode != "0" ]];
 then
     >&2 echo failure
