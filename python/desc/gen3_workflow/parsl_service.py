@@ -398,7 +398,8 @@ class ParslGraph(dict):
     the generic_worklow DAG.  This class also serves as a container
     for all of the jobs in the DAG.
     """
-    def __init__(self, generic_workflow, config, do_init=True, dfk=None):
+    def __init__(self, generic_workflow, config, do_init=True, dfk=None,
+                 monitoring_db='./runinfo/monitoring.db'):
         """
         Parameters
         ----------
@@ -411,6 +412,8 @@ class ParslGraph(dict):
         dfk: parsl.DataFlowKernel [None]
             The parsl DataFlowKernel that is nominally created from
              `config['parsl_config']`.
+        monitoring_db: str ['./runinfo/monitoring.db']
+            Parsl's monitoring database file.
         """
         super().__init__()
         self.gwf = generic_workflow
@@ -422,7 +425,11 @@ class ParslGraph(dict):
         self.tmp_dirname = 'tmp_repos'
         self._ingest()
         self._qgraph = None
-        self.monitoring_db = './monitoring.db'
+        # Use old location (in cwd) of the monitoring.db file if it
+        # isn't in the expected location.
+        self.monitoring_db = './monitoring.db' if not \
+            os.path.isfile(monitoring_db) else monitoring_db
+
         self.have_monitoring_info = False
         try:
             self._update_status()
