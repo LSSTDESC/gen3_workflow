@@ -69,4 +69,4 @@ jobs:
                 cd tests/cpBias_test
                 bash run_cpBias.sh
                 cd ..
-                python test_query_workflow.py
+                pytest test_query_workflow.py test_bps_restart.py

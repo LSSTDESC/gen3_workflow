@@ -11,12 +11,12 @@ class QueryWorkflowTestCase(unittest.TestCase):
         Set up the test repo with a ParslGraph object, but without
         executing any pipetasks.
         """
-        self.tmp_dir = os.path.realpath('./tmp_query_workflow')
+        tests_dir = os.path.join(os.environ['GEN3_WORKFLOW_DIR'], 'tests')
+        self.tmp_dir = os.path.join(tests_dir, 'tmp_query_workflow')
         if os.path.isdir(self.tmp_dir):
             shutil.rmtree(self.tmp_dir)
         os.makedirs(self.tmp_dir)
         os.chdir(self.tmp_dir)
-        tests_dir = os.path.join(os.environ['GEN3_WORKFLOW_DIR'], 'tests')
         for item in ('parsl_graph_init.py', 'bps_cpBias.yaml',
                      'run_cpBias.sh', 'cpBias.yaml'):
             shutil.copy(os.path.join(tests_dir, 'cpBias_test', item), '.')
