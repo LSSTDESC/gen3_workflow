@@ -45,7 +45,7 @@ def get_task_name(job_name, bps_config=None):
     return tokens[1]
 
 
-def query_workflow(workflow_name, db_file='monitoring.db'):
+def query_workflow(workflow_name, db_file='./runinfo/monitoring.db'):
     """
     Query the workflow, task, and status tables for the
     status of each task.  Use the task.task_stderr as the unique
@@ -84,9 +84,11 @@ def query_workflow(workflow_name, db_file='monitoring.db'):
         task_type = get_task_name(job_name)
         data['task_type'].append(task_type)
         data['status'].append(row['task_status_name'])
+    if not data:
+        # No tasks have been processed yet, so return an empty dataframe.
+        return pd.DataFrame()
     idx = np.array(data['status']) != "running_ended"
-    dfret = pd.DataFrame(data=data)[idx]
-    return dfret
+    return pd.DataFrame(data=data)[idx]
 
 
 def print_status(df, task_types=None):

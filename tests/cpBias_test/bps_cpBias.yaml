@@ -8,10 +8,11 @@ payload:
   butlerConfig: test_repo
   inCollection: LSSTCam/raw/all,LSSTCam/calib
   dataQuery: "instrument='LSSTCam'"
+  outputRun: "u/lsst/{payloadName}/test_run"
 
 parsl_config:
   retries: 0
-  monitoring: false
+  monitoring: true
   executor: WorkQueue
   provider: Local
   log_level: logging.WARNING
