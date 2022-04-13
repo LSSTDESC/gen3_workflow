@@ -13,7 +13,7 @@ class BpsRestartTestCase(unittest.TestCase):
         executing any pipetasks.
         """
         tests_dir = os.path.join(os.environ['GEN3_WORKFLOW_DIR'], 'tests')
-        self.tmp_dir = os.path.join(tests_dir, 'tmp_query_workflow')
+        self.tmp_dir = os.path.join(tests_dir, 'tmp_bps_restart')
         if os.path.isdir(self.tmp_dir):
             shutil.rmtree(self.tmp_dir)
         os.makedirs(self.tmp_dir)
