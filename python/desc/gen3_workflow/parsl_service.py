@@ -661,10 +661,11 @@ class ParslGraph(dict):
                        if not job.dependencies]
 
         if block:
-            # Calling .result() for each future blocks returning from
-            # this method until all the jobs have executed.  This is
-            # needed for running in a non-interactive python process
-            # that would otherwise end before the futures resolve.
+            # Calling .exception() for each future blocks returning
+            # from this method until all the jobs have executed or
+            # raised an error.  This is needed for running in a
+            # non-interactive python process that would otherwise end
+            # before the futures resolve.
             _ = [future.exception() for future in futures]
             # Since we're running non-interactively, run self.finalize()
             # to transfer datasets to the destination butler.
@@ -733,6 +734,38 @@ class ParslService(BaseWmsService):
             = load_parsl_config(workflow.parsl_graph.config)
 
         workflow.parsl_graph.run(block=True)
+
+    def restart(self, workflow_name):
+        """Restart a workflow.
+
+        Parameters
+        ----------
+        workflow_name : str
+            The workflow name in the Parsl monitoring.db file.  This is
+            also the `outputRun` name in the bps config.  The bps submit
+            directory must be in the current working directory.
+
+        Returns
+        -------
+        run_id : str
+            This is set to workflow_name.
+        run_name : str
+            This is set to workflow_name.
+        message : str
+            Empty string for now.
+
+        Notes
+        -----
+        For now, this implementation assumes the restart succeeds, since
+        the graph.run(block=True) command only returns if and when the
+        workflow runs to completion.
+        """
+        parsl_graph = os.path.join('submit', workflow_name,
+                                   'parsl_graph_config.pickle')
+        graph = ParslGraph.restore(parsl_graph)
+        graph.run(block=True)
+
+        return workflow_name, workflow_name, ''
 
     def cancel(self, wms_id, pass_thru=None):
         """Not implemented"""

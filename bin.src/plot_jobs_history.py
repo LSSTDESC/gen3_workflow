@@ -58,6 +58,8 @@ for run_id, start_time in zip(run_ids, start_times):
 
     data = defaultdict(list)
     job_logs = set(df0.query('task_status_name == "running"')['task_stderr'])
+    if not job_logs:
+        continue
     status_flags = set('running running_ended exec_done failed'.split())
     for _, row in df0.iterrows():
         if (row.task_status_name not in status_flags or
