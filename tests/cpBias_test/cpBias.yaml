@@ -1,4 +1,6 @@
-description: cp_pipe BIAS calibration construction
+description: Modified cpBias pipeline to run with unit tests
+imports:
+  location: "$CP_PIPE_DIR/pipelines/cpBias.yaml"
 tasks:
   isr:
     class: lsst.ip.isr.IsrTask
@@ -17,14 +19,3 @@ tasks:
       doFlat: False
       doApplyGains: False
       doFringe: False
-  cpBiasCombine:
-    class: lsst.cp.pipe.cpCombine.CalibCombineTask
-    config:
-      connections.inputExps: 'cpBiasProc'
-      connections.outputData: 'bias'
-      calibrationType: 'bias'
-      exposureScaling: "Unity"
-contracts:
-  - isr.doBias == False
-  - cpBiasCombine.calibrationType == "bias"
-  - cpBiasCombine.exposureScaling == "Unity"
