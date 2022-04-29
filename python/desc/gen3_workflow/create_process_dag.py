@@ -3,15 +3,15 @@ __all__ = ['create_process_dag']
 class Dag:
     def __init__(self):
         self.edges = set()
+        self.orphaned_tasks = set()
 
     def process(self, jobs):
         prereqs = []
         task_types = set()
         for job in jobs:
+            if not job.prereqs and not job.dependencies:
+                self.orphaned_tasks.add(job.gwf_job.label)
             for prereq in job.prereqs:
-                if prereq.gwf_job is None:
-                    # skip jobs to copy exec butler files
-                    continue
                 self.edges.add(f'{prereq.gwf_job.label}->{job.gwf_job.label}')
                 if prereq.gwf_job.label in task_types:
                     continue
@@ -23,6 +23,8 @@ class Dag:
     def write_dotfile(self, outfile):
         with open(outfile, 'w') as fd:
             fd.write('digraph DAG {\n')
+            for task in self.orphaned_tasks:
+                fd.write(task + '\n')
             for edge in self.edges:
                 fd.write(edge + ';\n')
             fd.write('}\n')
@@ -32,8 +34,6 @@ def create_process_dag(parsl_graph, outfile=None):
     end_points = set()
     task_types = set()
     for job in parsl_graph.values():
-        if job.dependencies:
-            continue
         if job.gwf_job.label not in task_types:
            task_types.add(job.gwf_job.label)
            end_points.add(job)
