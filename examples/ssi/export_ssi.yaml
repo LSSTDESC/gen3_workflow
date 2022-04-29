@@ -1,0 +1,32 @@
+# Use this file to import the ssi catalog into an existing repo with
+# `butler import --export-file export_ssi.yaml <full path to repo> <full path to ssi catalog folder>`
+# where `<full path to ssi catalog folder>/ssi/ssi_catalog_3828.parq` is
+# the catalog we want to import.
+description: Butler Data Repository Export
+version: 1.0.1
+data:
+# The DC2/external run collection should only be imported once, so omit
+# this section for subsequent catalog imports into this run collection.
+- type: collection
+  collection_type: RUN
+  name: DC2/external
+  host: null
+  timespan_begin: null
+  timespan_end: null
+- type: dataset_type
+  name: fakes_fakeSourceCat
+  dimensions:
+  - skymap
+  - tract
+  storage_class: DataFrame
+  is_calibration: false
+- type: dataset
+  dataset_type: fakes_fakeSourceCat
+  run: DC2/external
+  records:
+  - dataset_id:
+    - 9999
+    data_id:
+      skymap: 'DC2'
+      tract: 3828
+    path: ssi/ssi_catalog_3828.parq
