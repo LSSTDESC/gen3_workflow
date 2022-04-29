@@ -1,0 +1,84 @@
+description: The DRP fakes pipeline for DC2 coadd data.
+imports:
+  location: "${GEN3_WORKFLOW_DIR}/pipelines/DRP-imSim.yaml"
+  exclude:
+    - skyCorr
+    - isr
+    - characterizeImage
+    - calibrate
+    - selectGoodSeeingVisits
+    - templateGen
+    - imageDifference
+    - transformDiaSourceCat
+    - consolidateDiaSourceTable
+    - drpAssociation
+    - drpDiaCalculation
+    - forcedPhotDiffim
+    - forcedPhotCcdOnDiaObjects
+    - forcedPhotDiffOnDiaObjects
+    - transformForcedSourceTable
+    - consolidateForcedSourceTable
+    - getTemplate
+    - writeForcedSourceTable
+    - consolidateAssocDiaSourceTable
+    - consolidateFullDiaObjectTable
+    - writeForcedSourceOnDiaObjectTable
+    - transformForcedSourceOnDiaObjectTable
+    - consolidateForcedSourceOnDiaObjectTable
+    - TE1
+    - TE2
+    - wPerp
+    - writeSourceTable
+    - transformSourceTable
+    - consolidateSourceTable
+    - isolatedStarAssociation
+    - finalizeCharacterization
+    - consolidateVisitSummary
+    - makeWarp
+    - assembleCoadd
+    - healSparsePropertyMaps
+    - consolidateHealSparsePropertyMaps
+    - makeVisitTable
+    - makeCcdVisitTable
+    - forcedPhotCcd
+tasks:
+  coaddsWithFakes:
+    class: lsst.pipe.tasks.insertFakes.InsertFakesTask
+  detection:
+    class: lsst.pipe.tasks.multiBand.DetectCoaddSourcesTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"
+  mergeDetections:
+    class: lsst.pipe.tasks.mergeDetections.MergeDetectionsTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"
+  deblend:
+    class: lsst.pipe.tasks.deblendCoaddSourcesPipeline.DeblendCoaddSourcesMultiTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"
+  measure:
+    class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"
+  mergeMeasurements:
+    class: lsst.pipe.tasks.mergeMeasurements.MergeMeasurementsTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"
+  writeObjectTable:
+    class: lsst.pipe.tasks.postprocess.WriteObjectTableTask
+    config:
+      connections.coaddName: "fakes_deep"
+  transformObjectTable:
+    class: lsst.pipe.tasks.postprocess.TransformObjectCatalogTask
+    config:
+      connections.coaddName: "fakes_deep"
+  forcedPhotCoadd:
+    class: lsst.meas.base.forcedPhotCoadd.ForcedPhotCoaddTask
+    config:
+      connections.inputCoaddName: "fakes_deep"
+      connections.outputCoaddName: "fakes_deep"

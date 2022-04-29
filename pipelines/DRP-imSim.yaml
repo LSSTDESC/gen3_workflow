@@ -1,0 +1,28 @@
+description: DRP specialized for ImSim-DC2 data
+instrument: lsst.obs.lsst.LsstCamImSim
+imports:
+  - ${DRP_PIPE_DIR}/ingredients/DRP.yaml
+tasks:
+  isr:
+    class: lsst.ip.isr.IsrTask
+    config:
+      connections.newBFKernel: bfk
+      doDefect: false
+      doBrighterFatter: true
+  calibrate:
+    class: lsst.pipe.tasks.calibrate.CalibrateTask
+    config:
+      connections.astromRefCat: "cal_ref_cat"
+      connections.photoRefCat: "cal_ref_cat"
+      astromRefObjLoader.ref_dataset_name: "cal_ref_cat"
+      photoRefObjLoader.ref_dataset_name: "cal_ref_cat"
+      python: >
+        config.astromRefObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
+        config.photoRefObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
+  measure:
+    class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
+    config:
+      connections.refCat: "cal_ref_cat"
+      match.refObjLoader.ref_dataset_name: "cal_ref_cat"
+      python: >
+        config.match.refObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
