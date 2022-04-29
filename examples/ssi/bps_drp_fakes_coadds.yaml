@@ -1,0 +1,11 @@
+includeConfigs:
+  - ${GEN3_WORKFLOW_DIR}/python/desc/gen3_workflow/etc/bps_drp_baseline.yaml
+  - ${GEN3_WORKFLOW_DIR}/examples/bps_DC2-3828-y1_resources.yaml
+
+pipelineYaml: "${GEN3_WORKFLOW_DIR}/examples/ssi/DRP-fakes_coadds.yaml"
+
+payload:
+  payloadName: drp_fakes_3828_24
+  dataQuery: "skymap='DC2' and tract=3828 and patch=24"
+  butlerConfig: /global/cfs/cdirs/lsst/production/gen3/DC2/Run2.2i/repo
+  inCollection: u/lsst/drp_3828_24,DC2/external
