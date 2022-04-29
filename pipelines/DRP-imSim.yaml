@@ -12,17 +12,17 @@ tasks:
   calibrate:
     class: lsst.pipe.tasks.calibrate.CalibrateTask
     config:
-      connections.astromRefCat: "cal_ref_cat"
-      connections.photoRefCat: "cal_ref_cat"
-      astromRefObjLoader.ref_dataset_name: "cal_ref_cat"
-      photoRefObjLoader.ref_dataset_name: "cal_ref_cat"
+      connections.astromRefCat: "cal_ref_cat_2_2"
+      connections.photoRefCat: "cal_ref_cat_2_2"
+      astromRefObjLoader.ref_dataset_name: "cal_ref_cat_2_2"
+      photoRefObjLoader.ref_dataset_name: "cal_ref_cat_2_2"
       python: >
         config.astromRefObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
         config.photoRefObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
   measure:
     class: lsst.pipe.tasks.multiBand.MeasureMergedCoaddSourcesTask
     config:
-      connections.refCat: "cal_ref_cat"
-      match.refObjLoader.ref_dataset_name: "cal_ref_cat"
+      connections.refCat: "cal_ref_cat_2_2"
+      match.refObjLoader.ref_dataset_name: "cal_ref_cat_2_2"
       python: >
         config.match.refObjLoader.filterMap = {band: 'lsst_%s_smeared' % (band) for band in 'ugrizy'};
