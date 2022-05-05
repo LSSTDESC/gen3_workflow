@@ -603,7 +603,7 @@ class ParslGraph(dict):
             pickle.dump(self.config, fd)
 
     @staticmethod
-    def restore(config_file, parsl_config=None):
+    def restore(config_file, parsl_config=None, use_dfk=True):
         """
         Restore the ParslGraph from a pickled bps config file.
 
@@ -619,6 +619,9 @@ class ParslGraph(dict):
             'desc.gen3_workflow.config.thread_pool_config_4'
             could be provided to run interactively using the local node's
             resources.
+        use_dfk: bool [True]
+            Flag to generate and use the DataFlowKernel either from the
+            original config or from the alternative parsl_config.
 
         Returns
         -------
@@ -644,7 +647,7 @@ class ParslGraph(dict):
             else:
                 config['parslConfig'] = parsl_config
 
-        dfk = load_parsl_config(config)
+        dfk = load_parsl_config(config) if use_dfk else None
 
         return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
