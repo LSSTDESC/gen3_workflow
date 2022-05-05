@@ -588,7 +588,7 @@ class ParslGraph(dict):
         job_name = 'pipetaskInit'
         if self.config['outputRun'] not in butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
-            command = 'time ' + _cmdline(pipetaskInit)
+            command = _cmdline(pipetaskInit)
             command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
@@ -717,7 +717,7 @@ class ParslService(BaseWmsService):
         workflow = ParslWorkflow.\
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
-
+        print(f'Run Name: {workflow.name}')
         return workflow
 
     def submit(self, workflow):
@@ -794,6 +794,8 @@ class ParslWorkflow(BaseWmsWorkflow):
         """
         super().__init__(name, config)
         self.parsl_graph = None
+        self.name = config['outputRun']
+        self.run_id = config['outputRun']
 
     @classmethod
     def from_generic_workflow(cls, config, generic_workflow, out_prefix,
