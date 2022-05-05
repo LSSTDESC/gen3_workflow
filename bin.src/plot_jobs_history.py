@@ -19,7 +19,7 @@ parser.add_argument('--workflow_name', type=str, default=None,
 parser.add_argument('--run_id', type=str, default=None,
                     help=('Run id for the specified workflow. '
                           'If None, then process all runs.'))
-parser.add_argument('--db_file', type=str, default='monitoring.db',
+parser.add_argument('--db_file', type=str, default='./runinfo/monitoring.db',
                     help='Name of monitoring db file')
 args = parser.parse_args()
 
