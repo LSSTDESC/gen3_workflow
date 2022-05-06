@@ -3,8 +3,8 @@ Introduction
 
 Basic user-level documentation for bps is available in the `bps
 quickstart guide
-<https://github.com/lsst/ctrl_bps/blob/main/doc/lsst.ctrl.bps/quickstart.rst>`_
-in the `ctrl_bps <https://github.com/lsst/ctrl_bps>`_ repo.  Note,
+<https://github.com/lsst/ctrl_bps/blob/main/doc/lsst.ctrl.bps/quickstart.rst>`__
+in the `ctrl_bps <https://github.com/lsst/ctrl_bps>`__ repo.  Note,
 however, that the Parsl plugin doesn't support all of the features
 described in that guide.  This is largely because bps has been
 designed to use a workflow/batch system like HTCondor, where each job
@@ -20,54 +20,56 @@ nodes.
 Available bps Commands
 --------------------------
 
-``bps submit <bps yaml>``
+:command:`bps submit <bps yaml>`
   This command executes the pipeline from end-to-end.  At the start, a
-  subdirectory in the ``submit`` folder in the cwd is created where
+  subdirectory in the :file:`submit` folder in the cwd is created where
   bps and Parsl store the following assets, which are needed for
   executing and managing the workflow:
 
   * The QuantumGraph (QG) that defines the workflow DAG.
   * The main copy of the execution butler repository, if the execution
     butler is used.
-  * ``tmp_repos`` folder to contain the temporary per-pipetask copies
+  * :file:`tmp_repos` folder to contain the temporary per-pipetask copies
     of the execution butler repo.
-  *  ``logging`` folder to contain log files for each pipetask.
+  * :file:`logging` folder to contain log files for each pipetask.
   * A copy of the as-run bps yaml file.
   * Log files for the creation of the QG and main execution butler repo.
-  * ``final_job.bash``, a bash script that performs the final merge
+  * :file:`final_job.bash`, a bash script that performs the final merge
     step of the workflow jobs into the central destination repository.
-  * ``parsl_graph_config.pickle``, which contains a copy of
-    the ``ParslGraph`` object that encapsulates the workflow information used
-    by Parsl.
+  * :file:`parsl_graph_config.pickle`, which contains a copy of the
+    :py:class:`ParslGraph` object that encapsulates the workflow
+    information used by Parsl.
 
-  In addition, Parsl creates a ``runinfo`` folder in the cwd which contains
-  Parsl-specific log files for each run as well as a ``monitoring.db``
-  file that's used to keep track of the status of the workflows.  Once
-  those assets are in place, Parsl runs pipetask jobs on the reserved
-  nodes.
+  In addition, Parsl creates a :file:`runinfo` folder in the cwd which
+  contains Parsl-specific log files for each run as well as a
+  :file:`monitoring.db` file that's used to keep track of the status
+  of the workflows.  Once those assets are in place, Parsl runs the
+  pipetask jobs on the reserved nodes.
 
-``bps prepare <bps yaml>``
-  This command creates all of the assets mentioned above, but it stops short
-  of running the pipetask jobs.  Since the QG generation step only uses a
-  single core and can take up to several hours for large workflows, it's
-  useful to run ``bps prepare`` separately first, outside of a pilot job,
-  then use a pilot job and ``bps restart`` to run the full workflow.
+:command:`bps prepare <bps yaml>`
+  This command creates all of the assets mentioned above, but it stops
+  short of running the pipetask jobs.  Since the QG generation step
+  only uses a single core and can take up to several hours for large
+  workflows, it's useful to run :command:`bps prepare` separately
+  first, outside of a pilot job, then use a pilot job and
+  :command:`bps restart` to run the full workflow.
 
-``bps restart --id <workflow_name>``
+:command:`bps restart --id <workflow_name>`
   If the pilot job times out, is cancelled, or otherwise stops before
   all of the pipetask jobs in a workflow have run, one can restart the
-  workflow using the ``bps restart`` command.  The ``workflow_name``
-  is printed to the screen when either ``bps submit`` or ``bps
-  prepare`` are run.  The workflow name has the form of
-  ``{payloadName}/{timestamp}`` as defined by those elements in the
-  bps yaml file (see below).  These names are also used as the folder
-  names for each run in the submit directory.
+  workflow using the :command:`bps restart` command.  The
+  ``workflow_name`` is printed to the screen when either :command:`bps
+  submit` or :command:`bps prepare` are run.  The workflow name has
+  the form of ``{payloadName}/{timestamp}`` as defined by those
+  elements in the bps yaml file (see below).  These names are also
+  used as the folder names for each run in the :file:`submit` directory.
 
-Note that ``bps restart`` must be executed from the same directory that
-``bps submit`` or ``bps prepare`` were run.
+Note that :command:`bps restart` must be executed from the same
+directory where :command:`bps submit` or :command:`bps prepare` were
+run.
 
 Example bps Configuration File
-----------------------------------
+------------------------------
 
 Workflows run under bps are defined using yaml files.  These contain a
 lot of the same information as the pipetask command lines, e.g., the
@@ -102,20 +104,21 @@ Here's an example for the Parsl plugin:
      #max_threads: 4
 
 The first entry under the ``includedConfigs`` section sets configuration
-parameters for the Parsl plugin that overrides default values defined in
+parameters for the Parsl plugin that override default values defined in
 the ctrl_bps package.  The second entry under that section points to a
 yaml file with per-pipetask resource requirements that were estimated from
 running on DC2 one-year depth WFD observations of tract 3828.  These resource
 specifications can be overridden in the submission yaml file.
 
-The ``pipelineYaml`` and ``payload`` sections would be the same as for any
-other plugin, and are described in the `bps quickstart guide <https://github.com/lsst/ctrl_bps/blob/main/doc/lsst.ctrl.bps/quickstart.rst>`_.
+The ``pipelineYaml`` and ``payload`` sections would be the same as for
+any other plugin, and are described in the `bps quickstart guide
+<https://github.com/lsst/ctrl_bps/blob/main/doc/lsst.ctrl.bps/quickstart.rst>`__.
 
 The ``parsl_config`` section defines the resources available for
 processing and how Parsl will manage those resources.  The first three
 items pertain to all ``parsl_config`` configurations, and the
 remaining ones are specific to the `Parsl executor
-<https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors>`_
+<https://parsl.readthedocs.io/en/stable/userguide/execution.html#executors>`__
 used:
 
 ``retries``
@@ -209,8 +212,8 @@ The ``weekly_version`` can be set to different weekly if desired.
 Workflow Status Summary
 -----------------------
 
-The status of a workflow can be displayed with the ``workflow_summary.py``
-executable, e.g.,
+The status of a workflow can be displayed with the
+:command:`workflow_summary.py` executable, e.g.,
 
 .. code-block:: bash
 
