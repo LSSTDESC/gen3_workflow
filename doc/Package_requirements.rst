@@ -15,7 +15,7 @@ For using the batch queues at NERSC, a CVMFS installation of
 ``lsst_distrib`` is recommended, although a shifter image could also
 be used if running on just a single node (see below).  An ``lsstsqre``
 shifter image cannot be used since the runtime environment on the
-submission node uses Slurm commands such as :command:`srun` to
+submission node uses Slurm commands such as **srun** to
 interact with the NERSC batch queues and those commands are not
 available in those images.  However, if one is running locally on a
 single node, then a shifter image can be used.
@@ -36,7 +36,7 @@ threads on a node.
 Since the LSST code currently uses python3.8, one should install a
 compatible version of ``ndcctools``. One can find the latest version
 of ``ndcctools`` compatible with the python version for the LSST stack
-by runnng :command:`conda search -c conda-forge ndcctools`.  Since
+by runnng **conda search -c conda-forge ndcctools**.  Since
 ``ndcctools`` package is installed with conda, and the CVMFS
 distributions are write-protected, it's useful to set up a local area
 to do that installation.  The following assumes that ``lsst_distrib``
@@ -89,7 +89,7 @@ Finally, the ``gen3_workflow`` package is needed.  To install and set it up, do
   $ cd gen3_workflow
   $ setup -r . -j
 
-Note that this :command:`setup` command must be issued after setting
+Note that this **setup** command must be issued after setting
 up ``lsst_distrib``.
 
 Using a shifter image
@@ -99,11 +99,11 @@ a shifter image instead of using ``lsst_distrib`` from CVMFS.  NERSC
 has `instructions on using shifter
 <https://docs.nersc.gov/development/shifter/how-to-use/>`__, and the
 following Dockerfile can be used to build an image with the required
-packages to use with shifter:
+packages:
 
 .. code-block:: YAML
 
-  from lsstsqre/centos:7-stack-lsst_distrib-w_2022_17
+  from lsstsqre/centos:7-stack-lsst_distrib-w_2022_08
 
   RUN source /opt/lsst/software/stack/loadLSST.bash &&\
       setup lsst_apps &&\

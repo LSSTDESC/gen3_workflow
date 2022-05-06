@@ -20,52 +20,52 @@ nodes.
 Available bps Commands
 --------------------------
 
-:command:`bps submit <bps yaml>`
+**bps submit <bps yaml>**
   This command executes the pipeline from end-to-end.  At the start, a
-  subdirectory in the :file:`submit` folder in the cwd is created where
+  subdirectory in the ``submit`` folder in the cwd is created where
   bps and Parsl store the following assets, which are needed for
   executing and managing the workflow:
 
   * The QuantumGraph (QG) that defines the workflow DAG.
   * The main copy of the execution butler repository, if the execution
     butler is used.
-  * :file:`tmp_repos` folder to contain the temporary per-pipetask copies
+  * ``tmp_repos`` folder to contain the temporary per-pipetask copies
     of the execution butler repo.
-  * :file:`logging` folder to contain log files for each pipetask.
+  * ``logging`` folder to contain log files for each pipetask.
   * A copy of the as-run bps yaml file.
   * Log files for the creation of the QG and main execution butler repo.
-  * :file:`final_job.bash`, a bash script that performs the final merge
+  * ``final_job.bash``, a bash script that performs the final merge
     step of the workflow jobs into the central destination repository.
-  * :file:`parsl_graph_config.pickle`, which contains a copy of the
-    :py:class:`ParslGraph` object that encapsulates the workflow
+  * ``parsl_graph_config.pickle``, which contains a copy of the
+    ``ParslGraph`` object that encapsulates the workflow
     information used by Parsl.
 
-  In addition, Parsl creates a :file:`runinfo` folder in the cwd which
+  In addition, Parsl creates a ``runinfo`` folder in the cwd which
   contains Parsl-specific log files for each run as well as a
-  :file:`monitoring.db` file that's used to keep track of the status
+  ``monitoring.db`` file that's used to keep track of the status
   of the workflows.  Once those assets are in place, Parsl runs the
   pipetask jobs on the reserved nodes.
 
-:command:`bps prepare <bps yaml>`
+**bps prepare <bps yaml>**
   This command creates all of the assets mentioned above, but it stops
   short of running the pipetask jobs.  Since the QG generation step
   only uses a single core and can take up to several hours for large
-  workflows, it's useful to run :command:`bps prepare` separately
+  workflows, it's useful to run **bps prepare** separately
   first, outside of a pilot job, then use a pilot job and
-  :command:`bps restart` to run the full workflow.
+  **bps restart** to run the full workflow.
 
-:command:`bps restart --id <workflow_name>`
+**bps restart --id <workflow_name>**
   If the pilot job times out, is cancelled, or otherwise stops before
   all of the pipetask jobs in a workflow have run, one can restart the
-  workflow using the :command:`bps restart` command.  The
-  ``workflow_name`` is printed to the screen when either :command:`bps
-  submit` or :command:`bps prepare` are run.  The workflow name has
+  workflow using the **bps restart** command.  The
+  ``workflow_name`` is printed to the screen when either **bps
+  submit** or **bps prepare** are run.  The workflow name has
   the form of ``{payloadName}/{timestamp}`` as defined by those
   elements in the bps yaml file (see below).  These names are also
-  used as the folder names for each run in the :file:`submit` directory.
+  used as the folder names for each run in the ``submit`` directory.
 
-Note that :command:`bps restart` must be executed from the same
-directory where :command:`bps submit` or :command:`bps prepare` were
+Note that **bps restart** must be executed from the same
+directory where **bps submit** or **bps prepare** were
 run.
 
 Example bps Configuration File
