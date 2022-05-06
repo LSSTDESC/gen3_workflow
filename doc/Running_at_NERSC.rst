@@ -213,7 +213,7 @@ Workflow Status Summary
 -----------------------
 
 The status of a workflow can be displayed with the
-:command:`workflow_summary.py` executable, e.g.,
+**workflow_summary.py** executable, e.g.,
 
 .. code-block:: bash
 
