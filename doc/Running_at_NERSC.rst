@@ -18,7 +18,7 @@ Parsl workflow manager to schedule the pipetask jobs on that set of
 nodes.
 
 Available bps Commands
---------------------------
+----------------------
 
 **bps submit <bps yaml>**
   This command executes the pipeline from end-to-end.  At the start, a
@@ -64,9 +64,10 @@ Available bps Commands
   elements in the bps yaml file (see below).  These names are also
   used as the folder names for each run in the ``submit`` directory.
 
-Note that **bps restart** must be executed from the same
-directory where **bps submit** or **bps prepare** were
-run.
+Note that **bps restart** must be executed from the same directory
+where **bps submit** or **bps prepare** were run.  For all three
+commands, one can suppress the log output to stderr with the
+**--no-log-tty** option, e.g., **bps --no-log-tty submit <bps yaml>**.
 
 Example bps Configuration File
 ------------------------------
@@ -129,9 +130,10 @@ used:
   set to ``True`` if workflow status summaries are desired.
 
 ``log_level``
-  This is python logging log-level to use for the Parsl log files.
-  Because of the way bps controls the logging at the application
-  level, Parsl logging is (unfortunately) echoed to stderr.
+  This is the python ``logging`` log-level to use for the Parsl log
+  files.  Because of the way bps controls the logging at the
+  application level, Parsl logging is (unfortunately) echoed to
+  stderr.
 
 ``executor``
   The Parsl plugin supports two Parsl executors, ``WorkQueue`` and
@@ -242,3 +244,32 @@ The status of a workflow can be displayed with the
 This shows the status of a workflow that successfully executed a
 subset of the pipetasks for a small test data set comprising just the
 CCD-visits covering patch 24 in tract 3828 with 5 visits per band.
+
+Setting up a user area in the Run2.2i and Run3.1i repos at NERSC
+----------------------------------------------------------------
+
+There are separate data repositories for the DC2 Run2.2i and Run3.1i data at NERSC, which are located, respectively, at
+
+.. code-block:: bash
+
+  /global/cfs/cdirs/lsst/production/gen3/DC2/Run2.2i/repo
+  /global/cfs/cdirs/lsst/production/gen3/DC2/Run3.1i/repo
+
+By default, bps will write output collections to a subfolder of the
+specified data repo labeled ``u/{operator}/{payloadName}``.  Here
+``operator`` is the user's username by default; its value can be
+overridden in the bps yaml file.  To avoid writing output directly to
+cfs, it is recommended to create a symlink, using ones username, from
+a working location, e.g., on scratch, to the ``u`` subfolder of the
+desired repo:
+
+.. code-block:: bash
+
+  $ cd <working dir>
+  $ mkdir <username>
+  $ ln -s ${PWD}/<username> /global/cfs/cdirs/lsst/production/gen3/DC2/Run2.2i/repo/u/
+
+Since the registries for the Run2.2i and Run3.1i repos are backed by a
+postgres database, you'll need a file with db access credentials in
+your home directory at NERSC.  Contact ``@jchiang87`` in LSSTC Slack
+to obtain these.
