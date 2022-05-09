@@ -9,4 +9,4 @@ This is open source software, available under the BSD license. If you are intere
 
 ## See details of installation
 
-Details about installation at NERSC can be found [here](https://github.com/LSSTDESC/gen3_workflow/tree/master/python/desc/gen3_workflow)
+Details about installation at NERSC can be found [here](./doc/Running_at_NERSC.rst).
