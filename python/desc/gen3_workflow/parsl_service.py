@@ -588,7 +588,7 @@ class ParslGraph(dict):
         job_name = 'pipetaskInit'
         if self.config['outputRun'] not in butler.registry.queryCollections():
             pipetaskInit = self.gwf.get_job(job_name)
-            command = 'time ' + _cmdline(pipetaskInit)
+            command = _cmdline(pipetaskInit)
             command = self.evaluate_command_line(command, pipetaskInit)
             subprocess.check_call(command, shell=True)
 
@@ -603,7 +603,7 @@ class ParslGraph(dict):
             pickle.dump(self.config, fd)
 
     @staticmethod
-    def restore(config_file, parsl_config=None):
+    def restore(config_file, parsl_config=None, use_dfk=True):
         """
         Restore the ParslGraph from a pickled bps config file.
 
@@ -619,6 +619,9 @@ class ParslGraph(dict):
             'desc.gen3_workflow.config.thread_pool_config_4'
             could be provided to run interactively using the local node's
             resources.
+        use_dfk: bool [True]
+            Flag to generate and use the DataFlowKernel either from the
+            original config or from the alternative parsl_config.
 
         Returns
         -------
@@ -644,7 +647,7 @@ class ParslGraph(dict):
             else:
                 config['parslConfig'] = parsl_config
 
-        dfk = load_parsl_config(config)
+        dfk = load_parsl_config(config) if use_dfk else None
 
         return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
@@ -717,7 +720,7 @@ class ParslService(BaseWmsService):
         workflow = ParslWorkflow.\
             from_generic_workflow(config, generic_workflow, out_prefix,
                                   service_class)
-
+        print(f'Run Name: {workflow.name}')
         return workflow
 
     def submit(self, workflow):
@@ -794,6 +797,8 @@ class ParslWorkflow(BaseWmsWorkflow):
         """
         super().__init__(name, config)
         self.parsl_graph = None
+        self.name = config['outputRun']
+        self.run_id = config['outputRun']
 
     @classmethod
     def from_generic_workflow(cls, config, generic_workflow, out_prefix,
