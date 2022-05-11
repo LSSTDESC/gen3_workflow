@@ -75,8 +75,7 @@ def query_workflow(workflow_name, db_file='./runinfo/monitoring.db'):
     task_stderrs = set()
     for _, row in df0.iterrows():
         if (row['task_stderr'] in task_stderrs and
-           row['task_status_name'] != "exec_done" and
-           row['task_status_name'] != "failed"):
+           row['task_status_name'] != "exec_done"):
             continue
         task_stderrs.add(row['task_stderr'])
         job_name = os.path.basename(row['task_stderr']).split('.')[0]
