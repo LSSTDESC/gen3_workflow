@@ -112,30 +112,6 @@ batch_54G = HighThroughputExecutor(
               block_error_handler=False
               )
 
-#batch_120G = HighThroughputExecutor(
-#              label='batch-120G',
-#              address=address_by_query(),
-#              worker_debug=False,
-#              poll_period=1000,
-#              worker_port_range=(54000, 54050),
-#              interchange_port_range=(54051, 54100),
-#              max_workers=1,
-#              provider=SlurmProvider(
-#                partition='htc',
-#                channel=LocalChannel(),
-#                account='lsst',
-#                exclusive=False,
-#                nodes_per_block=1,
-#                init_blocks=0,
-#                max_blocks=100,
-#                walltime="144:00:00",
-##                scheduler_options='#SBATCH --mem 120G -L sps',
-#                scheduler_options='#SBATCH --mem 170G -L sps',
-#                worker_init=initenv,     # Input your worker_init if needed
-#                ),
-#              )
-
-
 batch_120G = HighThroughputExecutor(
               label='batch-120G',
               address=address_by_query(),
@@ -144,16 +120,40 @@ batch_120G = HighThroughputExecutor(
               worker_port_range=worker_port_range,
               interchange_port_range=interchange_port_range,
               max_workers=1,
-              provider=GridEngineProvider(
+              provider=SlurmProvider(
+                partition='htc_highmem',
                 channel=LocalChannel(),
+                account='lsst',
+                exclusive=False,
                 nodes_per_block=1,
                 init_blocks=0,
-                max_blocks=50,
-                walltime="144:00:00",
-                scheduler_options='#$ -P P_lsst -l cvmfs=1,sps=1 -pe multicores 1 -q mc_highmem_huge',
-                worker_init='source /pbs/throng/lsst/software/parsl/dp02-tools/env.sh',
+                max_blocks=10,
+                walltime="168:00:00",
+                scheduler_options='#SBATCH --mem 230G -L sps',
+                cmd_timeout=60,
                 ),
+              block_error_handler=False
               )
+
+
+#batch_120G = HighThroughputExecutor(
+#              label='batch-120G',
+#              address=address_by_query(),
+#              worker_debug=False,
+#              poll_period=1000,
+#              worker_port_range=worker_port_range,
+#              interchange_port_range=interchange_port_range,
+#              max_workers=1,
+#              provider=GridEngineProvider(
+#                channel=LocalChannel(),
+#                nodes_per_block=1,
+#                init_blocks=0,
+#                max_blocks=50,
+#                walltime="144:00:00",
+#                scheduler_options='#$ -P P_lsst -l cvmfs=1,sps=1 -pe multicores 1 -q mc_highmem_huge',
+#                worker_init='source /pbs/throng/lsst/software/parsl/dp02-tools/env.sh',
+#                ),
+#              )
 
 
 
