@@ -38,6 +38,7 @@ batch_3G = HighThroughputExecutor(
                 max_blocks=3000,
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 3G -L sps',
+                cmd_timeout=60,
                 ),
               block_error_handler=False
               )
@@ -60,6 +61,7 @@ batch_6G = HighThroughputExecutor(
                 max_blocks=3000,
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 6G -L sps',
+                cmd_timeout=60,
                 ),
               block_error_handler=False
               )
@@ -82,6 +84,7 @@ batch_18G = HighThroughputExecutor(
                 max_blocks=500,
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 18G -L sps',
+                cmd_timeout=60,
                 ),
               block_error_handler=False
               )
@@ -104,6 +107,7 @@ batch_54G = HighThroughputExecutor(
                 max_blocks=500,
                 walltime="168:00:00",
                 scheduler_options='#SBATCH --mem 54G -L sps',
+                cmd_timeout=60,
                 ),
               block_error_handler=False
               )
