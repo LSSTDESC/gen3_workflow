@@ -66,8 +66,54 @@ batch_6G = HighThroughputExecutor(
               block_error_handler=False
               )
 
-batch_18G = HighThroughputExecutor(
-              label='batch-18G',
+batch_8G = HighThroughputExecutor(
+              label='batch-8G',
+              address=address_by_query(),
+              worker_debug=False,
+              poll_period=1000,
+              worker_port_range=worker_port_range,
+              interchange_port_range=interchange_port_range,
+              max_workers=1,
+              provider=SlurmProvider(
+                partition='htc',
+                channel=LocalChannel(),
+                account='lsst',
+                exclusive=False,
+                nodes_per_block=1,
+                init_blocks=0,
+                max_blocks=2000,
+                walltime="168:00:00",
+                scheduler_options='#SBATCH --mem 8G -L sps',
+                cmd_timeout=60,
+                ),
+              block_error_handler=False
+              )
+
+batch_16G = HighThroughputExecutor(
+              label='batch-16G',
+              address=address_by_query(),
+              worker_debug=False,
+              poll_period=1000,
+              worker_port_range=worker_port_range,
+              interchange_port_range=interchange_port_range,
+              max_workers=1,
+              provider=SlurmProvider(
+                partition='htc',
+                channel=LocalChannel(),
+                account='lsst',
+                exclusive=False,
+                nodes_per_block=1,
+                init_blocks=0,
+                max_blocks=1500,
+                walltime="168:00:00",
+                scheduler_options='#SBATCH --mem 16G -L sps',
+                cmd_timeout=60,
+                ),
+              block_error_handler=False
+              )
+
+batch_24G = HighThroughputExecutor(
+              label='batch-24G',
               address=address_by_query(),
               worker_debug=False,
               poll_period=1000,
@@ -83,14 +129,14 @@ batch_18G = HighThroughputExecutor(
                 init_blocks=0,
                 max_blocks=500,
                 walltime="168:00:00",
-                scheduler_options='#SBATCH --mem 18G -L sps',
+                scheduler_options='#SBATCH --mem 24G -L sps',
                 cmd_timeout=60,
                 ),
               block_error_handler=False
               )
 
-batch_54G = HighThroughputExecutor(
-              label='batch-54G',
+batch_60G = HighThroughputExecutor(
+              label='batch-60G',
               address=address_by_query(),
               worker_debug=False,
               poll_period=1000,
@@ -106,14 +152,14 @@ batch_54G = HighThroughputExecutor(
                 init_blocks=0,
                 max_blocks=500,
                 walltime="168:00:00",
-                scheduler_options='#SBATCH --mem 54G -L sps',
+                scheduler_options='#SBATCH --mem 60G -L sps',
                 cmd_timeout=60,
                 ),
               block_error_handler=False
               )
 
-batch_120G = HighThroughputExecutor(
-              label='batch-120G',
+batch_180G = HighThroughputExecutor(
+              label='batch-180G',
               address=address_by_query(),
               worker_debug=False,
               poll_period=1000,
@@ -127,34 +173,13 @@ batch_120G = HighThroughputExecutor(
                 exclusive=False,
                 nodes_per_block=1,
                 init_blocks=0,
-                max_blocks=10,
+                max_blocks=8,
                 walltime="168:00:00",
-                scheduler_options='#SBATCH --mem 230G -L sps',
+                scheduler_options='#SBATCH --mem 180G -L sps',
                 cmd_timeout=60,
                 ),
               block_error_handler=False
               )
-
-
-#batch_120G = HighThroughputExecutor(
-#              label='batch-120G',
-#              address=address_by_query(),
-#              worker_debug=False,
-#              poll_period=1000,
-#              worker_port_range=worker_port_range,
-#              interchange_port_range=interchange_port_range,
-#              max_workers=1,
-#              provider=GridEngineProvider(
-#                channel=LocalChannel(),
-#                nodes_per_block=1,
-#                init_blocks=0,
-#                max_blocks=50,
-#                walltime="144:00:00",
-#                scheduler_options='#$ -P P_lsst -l cvmfs=1,sps=1 -pe multicores 1 -q mc_highmem_huge',
-#                worker_init='source /pbs/throng/lsst/software/parsl/dp02-tools/env.sh',
-#                ),
-#              )
-
 
 
 local_executor = ThreadPoolExecutor(max_threads=16, label="submit-node")
@@ -169,7 +194,7 @@ monitor = MonitoringHub(
    )
 
 
-config = parsl.config.Config(executors=[batch_3G, batch_6G, batch_18G, batch_54G, batch_120G, local_executor],
+config = parsl.config.Config(executors=[batch_3G, batch_6G, batch_8G, batch_16G, batch_24G, batch_60G, batch_180G, local_executor],
                              app_cache=True,
                              retries=2,
                              strategy='htex_auto_scale',
