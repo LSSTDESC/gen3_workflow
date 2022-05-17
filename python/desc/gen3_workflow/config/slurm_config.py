@@ -4,7 +4,7 @@ from parsl.channels import LocalChannel
 from parsl.providers import SlurmProvider
 from parsl.providers import GridEngineProvider
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
+from parsl.addresses import address_by_hostname
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring.monitoring import MonitoringHub
 
@@ -22,7 +22,7 @@ interchange_port_range=(55001, 56000)
 
 batch_3G = HighThroughputExecutor(
               label='batch-3G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -45,7 +45,7 @@ batch_3G = HighThroughputExecutor(
 
 batch_6G = HighThroughputExecutor(
               label='batch-6G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -68,7 +68,7 @@ batch_6G = HighThroughputExecutor(
 
 batch_8G = HighThroughputExecutor(
               label='batch-8G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -91,7 +91,7 @@ batch_8G = HighThroughputExecutor(
 
 batch_16G = HighThroughputExecutor(
               label='batch-16G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -114,7 +114,7 @@ batch_16G = HighThroughputExecutor(
 
 batch_24G = HighThroughputExecutor(
               label='batch-24G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -137,7 +137,7 @@ batch_24G = HighThroughputExecutor(
 
 batch_60G = HighThroughputExecutor(
               label='batch-60G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -160,7 +160,7 @@ batch_60G = HighThroughputExecutor(
 
 batch_180G = HighThroughputExecutor(
               label='batch-180G',
-              address=address_by_query(),
+              address=address_by_hostname(),
               worker_debug=False,
               poll_period=1000,
               worker_port_range=worker_port_range,
@@ -185,7 +185,7 @@ batch_180G = HighThroughputExecutor(
 local_executor = ThreadPoolExecutor(max_threads=16, label="submit-node")
 
 monitor = MonitoringHub(
-       hub_address=address_by_query(),
+       hub_address=address_by_hostname(),
 #       hub_port=hub_port,
        logging_endpoint=logging_endpoint,
        monitoring_debug=False,
