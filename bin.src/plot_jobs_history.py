@@ -111,6 +111,8 @@ for run_id, start_time in zip(run_ids, start_times):
     edges = 24*60*(bin_edges - t0)
     for task in tasks:
         plt.stairs(bin_values[task], edges, label=task)
+    totals = sum(bin_values.values())
+    plt.stairs(totals, edges, label='all tasks', color='grey', linestyle=':')
     plt.legend(fontsize='x-small')
     plt.xlabel(f'24*60*(mjd - {t0})')
     plt.ylabel('# concurrent jobs')
