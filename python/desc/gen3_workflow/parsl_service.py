@@ -8,6 +8,7 @@ import shutil
 from collections import defaultdict
 import pickle
 import subprocess
+import uuid
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
@@ -388,9 +389,8 @@ fi
     def qgraph_nodes(self):
         """Return the list of nodes from the underlying QuantumGraph."""
         qgraph = self.parent_graph.qgraph
-        return [qgraph.getQuantumNodeByNodeId(NodeId(*_))
-                for _ in [(int(self.gwf_job.cmdvals['qgraphNodeId']),
-                           self.gwf_job.cmdvals['qgraphId'])]]
+        return [qgraph.getQuantumNodeByNodeId(
+            uuid.UUID(self.gwf_job.cmdvals['qgraphNodeId']))]
 
 class ParslGraph(dict):
     """
