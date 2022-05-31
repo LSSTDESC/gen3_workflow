@@ -8,7 +8,7 @@ import multiprocessing
 import yaml
 import numpy as np
 import pandas as pd
-
+import datetime
 
 __all__ = ['parse_metadata_yaml', 'gather_resource_info', 'add_num_visits']
 
@@ -19,9 +19,12 @@ def parse_metadata_yaml(yaml_file):
     by the lsst.pipe.base.timeMethod decorator as applied to pipetask
     methods.
     """
-    time_types = 'Cpu User System'.split()
-    min_fields = [f'Start{_}Time' for _ in time_types]
-    max_fields = [f'End{_}Time' for _ in time_types] + ['MaxResidentSetSize']
+#    time_types = 'Cpu User System'.split()
+    time_types = 'cpu user system'.split()
+#    min_fields = [f'Start{_}Time' for _ in time_types] + [f"start{_}Time" for _ in time_types] + ['startUtc']
+    min_fields = [f'start{_}time' for _ in time_types] + ['startutc']
+#    max_fields = [f'End{_}Time' for _ in time_types] + [f"end{_}Time" for _ in time_types] + ['endUtc'] + ['MaxResidentSetSize']
+    max_fields = [f'end{_}time' for _ in time_types] + ['endutc'] + ['maxresidentsetsize']
 
     results = dict()
     with open(yaml_file) as fd:
@@ -31,13 +34,13 @@ def parse_metadata_yaml(yaml_file):
     for method in methods:
         for key, value in md[method].items():
             for min_field in min_fields:
-                if not key.endswith(min_field):
+                if not key.lower().endswith(min_field):
                     continue
                 if min_field not in results or value < results[min_field]:
                     results[min_field] = value
                     continue
             for max_field in max_fields:
-                if not key.endswith(max_field):
+                if not key.lower().endswith(max_field):
                     continue
                 if max_field not in results or value > results[max_field]:
                     results[max_field] = value
@@ -67,8 +70,37 @@ def process_datarefs(datarefs, collections, butler, verbose=True):
             else:
                 data[column].append(dataId.get(column, None))
         results = parse_metadata_yaml(yaml_file)
-        data['cpu_time'].append(results.get('EndCpuTime', None))
-        data['maxRSS'].append(results.get('MaxResidentSetSize', None))
+
+        end_cpu_time = results.get("endcputime", None)
+        start_cpu_time = results.get("startcputime", None)
+        if end_cpu_time is None or start_cpu_time is None:
+            cpu_time = None
+        else:
+            cpu_time = float(end_cpu_time) - float(start_cpu_time)
+        data['cpu_time'].append(cpu_time)
+
+        start_utc = results.get("startutc", None)
+        if start_utc is not None:
+            try:
+                start_utc_time = datetime.datetime.strptime(start_utc, "%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                start_utc_time = datetime.datetime.strptime(start_utc, "%Y-%m-%dT%H:%M:%S")
+
+        end_utc = results.get("endutc", None)
+        if end_utc is not None:
+            try:
+                end_utc_time = datetime.datetime.strptime(end_utc, "%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                end_utc_time = datetime.datetime.strptime(end_utc, "%Y-%m-%dT%H:%M:%S")
+
+        if end_utc is None or start_utc is None:
+            utc_time = None
+        else:
+            utc_time = (end_utc_time - start_utc_time).total_seconds()
+        data['utc_time'].append(utc_time)
+
+        data['maxRSS'].append(results.get('maxresidentsetsize', None))
+
     return pd.DataFrame(data=data)
 
 
@@ -81,9 +113,9 @@ def gather_resource_info(butler, dataId, collections=None, verbose=False,
     """
     registry = butler.registry
     pattern = re.compile(datatype_pattern)
-    datarefs = list(registry.queryDatasets(pattern, dataId=dataId,
+    datarefs = list(set(registry.queryDatasets(pattern, dataId=dataId,
                                            findFirst=True,
-                                           collections=collections))
+                                           collections=collections)))
     nrefs = len(datarefs)
     if verbose:
         print(f'found {nrefs} datarefs')
