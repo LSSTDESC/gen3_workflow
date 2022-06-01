@@ -63,6 +63,18 @@ Available bps Commands
   the form of ``{payloadName}/{timestamp}`` as defined by those
   elements in the bps yaml file (see below).  These names are also
   used as the folder names for each run in the ``submit`` directory.
+  In order for bps to know to use the Parsl plugin, the following
+  environment variable needs to be set:
+  
+.. code-block:: SHELL
+
+  export BPS_WMS_SERVICE_CLASS=desc.gen3_workflow.ParslService
+  
+Alternatively, the service class can be specified on the command line:
+  
+.. code-block:: SHELL
+  
+  bps restart --wms-service-class desc.gen3_workflow.ParslService --id <workflow_name>
 
 Note that **bps restart** must be executed from the same directory
 where **bps submit** or **bps prepare** were run.  For all three
