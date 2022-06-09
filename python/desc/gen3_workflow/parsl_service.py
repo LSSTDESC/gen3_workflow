@@ -18,7 +18,7 @@ from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
-from desc.gen3_workflow.config import load_parsl_config
+from desc.gen3_workflow.config import load_parsl_config, set_parsl_logging
 import parsl
 from .query_workflow import query_workflow, print_status, get_task_name
 from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
@@ -656,6 +656,7 @@ class ParslGraph(dict):
         Run the encapsulated workflow by requesting the futures of
         the requested jobs or of those at the endpoints of the DAG.
         """
+        set_parsl_logging(self.config)
         if jobs is not None:
             futures = [self[job_name].get_future() for job_name in jobs]
         else:
