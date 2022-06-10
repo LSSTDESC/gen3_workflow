@@ -425,10 +425,7 @@ class ParslGraph(dict):
         self.tmp_dirname = 'tmp_repos'
         self._ingest()
         self._qgraph = None
-        # Use old location (in cwd) of the monitoring.db file if it
-        # isn't in the expected location.
-        self.monitoring_db = './monitoring.db' if not \
-            os.path.isfile(monitoring_db) else monitoring_db
+        self.monitoring_db = monitoring_db
 
         self.have_monitoring_info = False
         try:
