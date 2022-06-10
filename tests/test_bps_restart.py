@@ -3,7 +3,7 @@ import shutil
 import unittest
 import subprocess
 import lsst.daf.butler as daf_butler
-from desc.gen3_workflow import query_workflow
+from desc.gen3_workflow import ParslGraph
 
 class BpsRestartTestCase(unittest.TestCase):
     """TestCase class for the `bps restart` command line."""
@@ -45,6 +45,13 @@ class BpsRestartTestCase(unittest.TestCase):
                                                         instrument='LSSTCam')))
         self.assertEqual(len(dsrefs), 1)
         self.assertEqual(dsrefs[0].dataId['detector'], 94)
+
+        # Test ParslJob.have_outputs
+        parsl_graph = os.path.join('submit', workflow_name,
+                                   'parsl_graph_config.pickle')
+        graph = ParslGraph.restore(parsl_graph, use_dfk=False)
+        for job in graph.values():
+            assert(job.have_outputs())
 
 
 if __name__ == '__main__':
