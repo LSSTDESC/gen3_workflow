@@ -9,6 +9,7 @@ from collections import defaultdict
 import pickle
 import subprocess
 import uuid
+import parsl
 import lsst.utils
 import lsst.daf.butler
 from lsst.daf.butler import Butler, DimensionUniverse
@@ -19,8 +20,7 @@ from lsst.ctrl.bps.wms_service import BaseWmsWorkflow, BaseWmsService
 from lsst.pipe.base.graph import QuantumGraph, NodeId
 from desc.gen3_workflow.bash_apps import \
     small_bash_app, medium_bash_app, large_bash_app, local_bash_app
-from desc.gen3_workflow.config import load_parsl_config
-import parsl
+from desc.gen3_workflow.config import load_parsl_config, set_parsl_logging
 from .query_workflow import query_workflow, print_status, get_task_name
 from .lazy_cl_handling import fix_env_var_syntax, get_input_file_paths,\
     insert_file_paths
@@ -425,10 +425,7 @@ class ParslGraph(dict):
         self.tmp_dirname = 'tmp_repos'
         self._ingest()
         self._qgraph = None
-        # Use old location (in cwd) of the monitoring.db file if it
-        # isn't in the expected location.
-        self.monitoring_db = './monitoring.db' if not \
-            os.path.isfile(monitoring_db) else monitoring_db
+        self.monitoring_db = monitoring_db
 
         self.have_monitoring_info = False
         try:
@@ -651,11 +648,12 @@ class ParslGraph(dict):
 
         return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
-    def run(self, jobs=None, block=False, finalize=True):
+    def run(self, jobs=None, block=False):
         """
         Run the encapsulated workflow by requesting the futures of
         the requested jobs or of those at the endpoints of the DAG.
         """
+        set_parsl_logging(self.config)
         if jobs is not None:
             futures = [self[job_name].get_future() for job_name in jobs]
         else:
@@ -670,14 +668,27 @@ class ParslGraph(dict):
             # non-interactive python process that would otherwise end
             # before the futures resolve.
             _ = [future.exception() for future in futures]
-            # Since we're running non-interactively, run self.finalize()
-            # to transfer datasets to the destination butler.
-            if (finalize and
-                self.config['executionButler']['whenCreate'] != 'NEVER'):
+            if self.config['executionButler']['whenCreate'] != 'NEVER':
+                # Since we're using the execution butler and running
+                # non-interactively, run self.finalize()
+                # to transfer datasets to the destination butler.
                 self.finalize()
                 # Clean up any remaining temporary copies of the execution
-                # butler repos
+                # butler repos.
                 self.clean_up_exec_butler_files()
+            # Shutdown and dispose of the DataFlowKernel.
+            self.shutdown()
+
+    def shutdown(self):
+        """Shutdown and dispose of the Parsl DataFlowKernel.  This will stop
+        the monitoring and enable a new workflow to be created in the
+        same python session.  No further jobs can be run from this
+        `ParslGraph` object once the DFK has been shutdown.
+        `ParslGraph.restore(...)` can be used to restart a workflow with
+        a new DFK.
+        """
+        self.dfk.cleanup()
+        parsl.DataFlowKernelLoader.clear()
 
     def finalize(self):
         """Run final job to transfer datasets from the execution butler to

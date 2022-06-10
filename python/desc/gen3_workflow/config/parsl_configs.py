@@ -14,7 +14,7 @@ from lsst.ctrl.bps import BpsConfig
 import lsst.utils
 
 
-__all__ = ['load_parsl_config']
+__all__ = ['load_parsl_config', 'set_parsl_logging']
 
 
 def set_parsl_logging(bps_config):
