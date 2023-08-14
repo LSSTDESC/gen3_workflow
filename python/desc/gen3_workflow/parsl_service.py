@@ -424,6 +424,7 @@ class ParslGraph(dict):
         self.dfk = dfk
         self.tmp_dirname = 'tmp_repos'
         self._ingest()
+        self._qgraph_file = None
         self._qgraph = None
         self.monitoring_db = monitoring_db
 
@@ -509,12 +510,18 @@ class ParslGraph(dict):
         self.df = pd.DataFrame(data=data)
 
     @property
+    def qgraph_file(self):
+        if self._qgraph_file is None:
+            self._qgraph_file = glob.glob(os.path.join(
+                self.config['submitPath'], '*.qgraph'))[0]
+        return self._qgraph_file
+
+    @property
     def qgraph(self):
         """The QuantumGraph associated with the current bps job."""
         if self._qgraph is None:
-            qgraph_file = glob.glob(os.path.join(self.config['submitPath'],
-                                                 '*.qgraph'))[0]
-            self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+            self._qgraph = QuantumGraph.loadUri(self.qgraph_file,
+                                                DimensionUniverse())
         return self._qgraph
 
     def get_jobs(self, task_type, status='pending', query=None):
@@ -696,8 +703,8 @@ class ParslGraph(dict):
         log_file = os.path.join(self.config['submitPath'], 'logging',
                                 'final_merge_job.log')
         command = (f"(bash {self.config['submitPath']}/final_job.bash "
-                   f"{self.config['butlerConfig']} "
-                   f"{self.config['executionButlerTemplate']}) >& {log_file}")
+                   f"{self.qgraph_file} "
+                   f"{self.config['butlerConfig']}) >& {log_file}")
         subprocess.check_call(command, shell=True, executable='/bin/bash')
 
     def clean_up_exec_butler_files(self):
