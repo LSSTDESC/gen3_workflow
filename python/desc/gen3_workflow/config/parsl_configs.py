@@ -92,7 +92,7 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
 
 
 def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
-                    walltime='10:00:00', min_blocks=0, max_blocks=32, 
+                    walltime='10:00:00', min_blocks=0, max_blocks=32,
                     init_blocks=1, worker_init=None, cpus_per_node=1,
                     scheduler_options=None, **unused_options):
     """Factory function to provide a PBSProProvider.
@@ -105,8 +105,8 @@ def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
                             queue=qos,
                             channel=LocalChannel(),
                             nodes_per_block=nodes_per_block,
-                            worker_init = worker_init,
-                            cpus_per_node = cpus_per_node,
+                            worker_init=worker_init,
+                            cpus_per_node=cpus_per_node,
                             init_blocks=init_blocks,
                             min_blocks=min_blocks,
                             max_blocks=max_blocks,
