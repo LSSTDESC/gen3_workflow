@@ -18,7 +18,7 @@ jobs:
         strategy:
             matrix:
                 os: [ ubuntu-latest ]
-                py: [ 3.8 ]
+                py: [ "3.10" ]
                 CC: [ gcc ]
                 CXX: [ g++ ]
 
@@ -34,7 +34,7 @@ jobs:
               uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: stack
-                  python-version: 3.8
+                  python-version: "3.10"
                   condarc-file: etc/.condarc
 
             - name: Install conda deps
@@ -50,7 +50,7 @@ jobs:
               run: |
                 pip install -U --no-deps 'parsl[monitoring,workqueue] @ git+https://github.com/parsl/parsl@desc'
                 pip install typeguard tblib paramiko dill pyzmq globus-sdk sqlalchemy_utils
-                conda install -c conda-forge ndcctools=7.3.4=py38h4630a5e_0 --no-deps
+                conda install -c conda-forge ndcctools=7.6.1=py310he2ed3e8_0 --no-deps
 
             - name: Clone the package and checkout the branch
               shell: bash -l {0}

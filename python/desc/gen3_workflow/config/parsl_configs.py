@@ -92,7 +92,7 @@ def slurm_provider(nodes_per_block=1, constraint='knl', qos='regular',
 
 
 def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
-                    walltime='10:00:00', min_blocks=0, max_blocks=32, 
+                    walltime='10:00:00', min_blocks=0, max_blocks=32,
                     init_blocks=1, worker_init=None, cpus_per_node=1,
                     scheduler_options=None, **unused_options):
     """Factory function to provide a PBSProProvider.
@@ -105,8 +105,8 @@ def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
                             queue=qos,
                             channel=LocalChannel(),
                             nodes_per_block=nodes_per_block,
-                            worker_init = worker_init,
-                            cpus_per_node = cpus_per_node,
+                            worker_init=worker_init,
+                            cpus_per_node=cpus_per_node,
                             init_blocks=init_blocks,
                             min_blocks=min_blocks,
                             max_blocks=max_blocks,
@@ -117,7 +117,8 @@ def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
 
 
 def set_config_options(retries, monitoring, workflow_name, checkpoint,
-                       monitoring_debug):
+                       monitoring_debug, monitoring_hub_port,
+                       monitoring_interval):
     """
     Package retries, monitoring, and checkpoint options for
     parsl.config.Config as a dict.
@@ -126,9 +127,9 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint,
     if monitoring:
         config_options['monitoring'] \
             = MonitoringHub(hub_address=address_by_hostname(),
-                            hub_port=55055,
+                            hub_port=monitoring_hub_port,
                             monitoring_debug=monitoring_debug,
-                            resource_monitoring_interval=60,
+                            resource_monitoring_interval=monitoring_interval,
                             workflow_name=workflow_name)
     if checkpoint:
         config_options['checkpoint_mode'] = 'task_exit'
@@ -140,8 +141,11 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint,
 def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
                      wq_max_retries=1, port=9000, monitoring_debug=False,
+                     monitoring_hub_port=None, monitoring_interval=60,
                      **unused_options):
-    """Load a parsl config for a WorkQueueExecutor and the supplied provider."""
+    """
+    Load a parsl config for a WorkQueueExecutor and the supplied provider.
+    """
     executors = [WorkQueueExecutor(label='work_queue', port=port,
                                    shared_fs=True, provider=provider,
                                    worker_options=worker_options,
@@ -150,7 +154,9 @@ def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
 
     config_options = set_config_options(retries, monitoring, workflow_name,
-                                        checkpoint, monitoring_debug)
+                                        checkpoint, monitoring_debug,
+                                        monitoring_hub_port,
+                                        monitoring_interval)
 
     config = parsl.config.Config(strategy='simple',
                                  garbage_collect=False,
@@ -164,13 +170,15 @@ def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
                        checkpoint=False, retries=1,
                        labels=('submit-node', 'batch-small',
                                'batch-medium', 'batch-large'),
-                       monitoring_debug=False,
-                       **unused_options):
+                       monitoring_debug=False, monitoring_hub_port=None,
+                       monitoring_interval=60, **unused_options):
     """Load a parsl config using ThreadPoolExecutor."""
     executors = [ThreadPoolExecutor(max_threads=max_threads, label=label)
                  for label in labels]
     config_options = set_config_options(retries, monitoring, workflow_name,
-                                        checkpoint, monitoring_debug)
+                                        checkpoint, monitoring_debug,
+                                        monitoring_hub_port,
+                                        monitoring_interval)
     config = parsl.config.Config(executors=executors, **config_options)
     return parsl.load(config)
 
