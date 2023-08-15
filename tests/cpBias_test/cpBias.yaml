@@ -1,6 +1,6 @@
 description: Modified cpBias pipeline to run with unit tests
 imports:
-  location: "$CP_PIPE_DIR/pipelines/cpBias.yaml"
+  location: "$CP_PIPE_DIR/pipelines/_ingredients/cpBias.yaml"
 tasks:
   isr:
     class: lsst.ip.isr.IsrTask
