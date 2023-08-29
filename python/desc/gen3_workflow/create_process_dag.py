@@ -10,7 +10,6 @@ class Dag:
         for job in jobs:
             for prereq in job.prereqs:
                 if prereq.gwf_job is None:
-                    # skip jobs to copy exec butler files
                     continue
                 self.edges.add(f'{prereq.gwf_job.label}->{job.gwf_job.label}')
                 if prereq.gwf_job.label in task_types:

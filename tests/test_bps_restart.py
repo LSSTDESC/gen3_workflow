@@ -33,6 +33,7 @@ class BpsRestartTestCase(unittest.TestCase):
         """Test the bps restart command for the Parsl plugin."""
         # Run bps restart --id <workflow_name>.
         os.chdir(self.tmp_dir)
+        os.environ['PWD'] = self.tmp_dir
         os.environ['BPS_WMS_SERVICE_CLASS'] = 'desc.gen3_workflow.ParslService'
         workflow_name = 'u/lsst/bot_13035_R22_S11_cpBias/test_run'
         command = f'bps restart --id {workflow_name}'

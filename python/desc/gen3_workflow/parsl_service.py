@@ -234,38 +234,8 @@ class ParslJob:
         pipetask_cmd \
             = self.parent_graph.evaluate_command_line(pipetask_cmd, self.gwf_job)
 
-        exec_butler_dir = self.config['executionButlerDir']
-        if not os.path.isdir(exec_butler_dir):
-            # We're not using the execution butler so omit the file
-            # staging parts.
-            return (pipetask_cmd +
-                    ' && >&2 echo success || (>&2 echo failure; false)')
-
-        # Command line for the execution butler including lines to
-        # stage and un-stage the copies of the registry and
-        # butler.yaml file.
-        target_dir = os.path.join(os.path.dirname(exec_butler_dir),
-                                  self.parent_graph.tmp_dirname,
-                                  self.gwf_job.name)
-        my_command = f"""
-if [[ ! -d {target_dir} ]];
-then
-    mkdir {target_dir}
-fi
-cp {exec_butler_dir}/* {target_dir}/
-{pipetask_cmd}
-retcode=$?
-rm -rf {target_dir}
-if [[ $retcode != "0" ]];
-then
-    >&2 echo failure
-    false
-else
-    >&2 echo success
-    true
-fi
-"""
-        return my_command
+        return (pipetask_cmd +
+                ' && >&2 echo success || (>&2 echo failure; false)')
 
     def add_dependency(self, dependency):
         """
@@ -424,6 +394,7 @@ class ParslGraph(dict):
         self.dfk = dfk
         self.tmp_dirname = 'tmp_repos'
         self._ingest()
+        self._qgraph_file = None
         self._qgraph = None
         self.monitoring_db = monitoring_db
 
@@ -439,13 +410,6 @@ class ParslGraph(dict):
         for job_name in self.gwf:
             if job_name == 'pipetaskInit':
                 continue
-
-            # If using the execution butler, create a temp directory
-            # to contain copies of the exec butler repo.
-            exec_butler_dir = self.config['executionButlerDir']
-            if os.path.isdir(exec_butler_dir):
-                os.makedirs(os.path.join(os.path.dirname(exec_butler_dir),
-                                         self.tmp_dirname), exist_ok=True)
 
             task_name = get_task_name(job_name, self.config)
             if task_name not in self._task_list:
@@ -509,12 +473,18 @@ class ParslGraph(dict):
         self.df = pd.DataFrame(data=data)
 
     @property
+    def qgraph_file(self):
+        if self._qgraph_file is None:
+            self._qgraph_file = glob.glob(os.path.join(
+                self.config['submitPath'], '*.qgraph'))[0]
+        return self._qgraph_file
+
+    @property
     def qgraph(self):
         """The QuantumGraph associated with the current bps job."""
         if self._qgraph is None:
-            qgraph_file = glob.glob(os.path.join(self.config['submitPath'],
-                                                 '*.qgraph'))[0]
-            self._qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+            self._qgraph = QuantumGraph.loadUri(self.qgraph_file,
+                                                DimensionUniverse())
         return self._qgraph
 
     def get_jobs(self, task_type, status='pending', query=None):
@@ -668,14 +638,7 @@ class ParslGraph(dict):
             # non-interactive python process that would otherwise end
             # before the futures resolve.
             _ = [future.exception() for future in futures]
-            if self.config['executionButler']['whenCreate'] != 'NEVER':
-                # Since we're using the execution butler and running
-                # non-interactively, run self.finalize()
-                # to transfer datasets to the destination butler.
-                self.finalize()
-                # Clean up any remaining temporary copies of the execution
-                # butler repos.
-                self.clean_up_exec_butler_files()
+            self.finalize()
             # Shutdown and dispose of the DataFlowKernel.
             self.shutdown()
 
@@ -691,21 +654,14 @@ class ParslGraph(dict):
         parsl.DataFlowKernelLoader.clear()
 
     def finalize(self):
-        """Run final job to transfer datasets from the execution butler to
-        the destination repo butler."""
+        """Run final job to transfer datasets from the quantum-backed
+        butler to the destination repo butler."""
         log_file = os.path.join(self.config['submitPath'], 'logging',
                                 'final_merge_job.log')
         command = (f"(bash {self.config['submitPath']}/final_job.bash "
-                   f"{self.config['butlerConfig']} "
-                   f"{self.config['executionButlerTemplate']}) >& {log_file}")
+                   f"{self.qgraph_file} "
+                   f"{self.config['butlerConfig']}) >& {log_file}")
         subprocess.check_call(command, shell=True, executable='/bin/bash')
-
-    def clean_up_exec_butler_files(self):
-        """Clean up the copies of the execution butler."""
-        temp_root = os.path.dirname(self.config['executionButlerTemplate'])
-        temp_repo_dir = os.path.join(temp_root, 'tmp_repos')
-        if os.path.isdir(temp_repo_dir):
-            shutil.rmtree(temp_repo_dir)
 
 
 class ParslService(BaseWmsService):
