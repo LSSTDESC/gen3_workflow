@@ -141,7 +141,7 @@ class OverlapFinder:
         self.skymap_polygons = skymap_polygons
         self.rng = np.random.RandomState(seed)
 
-    def get_overlaps(self, visits, margin=10):
+    def get_overlaps(self, visits, margin=10, camera=LSSTCAM):
         """
         Compute the overlaps of sensor-visits from the list of visits
         with the sky map.
@@ -155,7 +155,6 @@ class OverlapFinder:
         -------
         pandas.DataFrame with the overlap info.
         """
-        global LSSTCAM
         dfs = []
         for i, visit in enumerate(visits):
             print(i, len(visits))
@@ -172,7 +171,7 @@ class OverlapFinder:
             rotangle = self.rng.uniform(0, 2*np.pi)
 
             data = defaultdict(list)
-            for detector in list(LSSTCAM):
+            for detector in camera:
                 if detector.getType() != DetectorType.SCIENCE:
                     continue
                 wcs  = wcs_from_boresight(ratel, dectel, rotangle, detector)
