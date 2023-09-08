@@ -264,11 +264,15 @@ def total_node_hours(pt_df, cpu_factor=1, cores_per_node=128,
     memory per process.
     """
     available_memory = memory_per_node - memory_min
-    node_hours = 0
-    node_hours_opt = 0
+    total = 0
+    total_opt = 0
+    data = defaultdict(list)
     for _, row in pt_df.iterrows():
         ncores = min(cores_per_node, int(available_memory/row['max_GB']))
         ncores_avg = min(cores_per_node, int(available_memory/row['avg_GB']))
-        node_hours += row['cpu_hours']*cpu_factor/ncores
-        node_hours_opt += row['cpu_hours']*cpu_factor/ncores_avg
-    return node_hours, node_hours_opt
+        total += row['cpu_hours']*cpu_factor/ncores
+        total_opt += row['cpu_hours']*cpu_factor/ncores_avg
+        data['pipetask'].append(row['pipetask'])
+        data['node_hours_max'].append(total)
+        data['node_hours_avg'].append(total_opt)
+    return pd.DataFrame(data)
