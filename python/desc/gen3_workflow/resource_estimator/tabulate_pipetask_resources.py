@@ -153,15 +153,17 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         pt_data['num_instances'].append(len(coadd_df))
         cpu_hours_total = 0
         memory = []
+        weighted_memory = 0
         t0 = time.time()
         for _, row in coadd_df.iterrows():
             num_visits = row[num_visit_col]
             cpu_hours, mem_GB = pipetask_funcs[task_name](num_visits)
             cpu_hours_total += cpu_hours
+            weighted_memory += cpu_hours*mem_GB
             memory.append(mem_GB)
         pt_data['cpu_hours'].append(cpu_hours_total)
         pt_data['max_GB'].append(np.max(memory))
-        pt_data['avg_GB'].append(np.mean(memory))
+        pt_data['avg_GB'].append(weighted_memory/cpu_hours_total)
         if verbose:
             print(time.time() - t0)
 
