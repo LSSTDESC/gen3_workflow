@@ -81,17 +81,10 @@ _FAILED = 'failed'
 _EXEC_DONE = 'exec_done'
 
 
-def run_command(command_line, inputs=(), stdout=None, stderr=None):
-    """
-    Run a command line as a parsl.bash_app.
-    """
-    return command_line
-
-
-RUN_COMMANDS = dict(small=small_bash_app(run_command),
-                    medium=medium_bash_app(run_command),
-                    large=large_bash_app(run_command),
-                    local=local_bash_app(run_command))
+RUN_DECORATORS = dict(small=small_bash_app,
+                      medium=medium_bash_app,
+                      large=large_bash_app,
+                      local=local_bash_app)
 
 
 class ResourceSpecs:
@@ -182,7 +175,13 @@ def get_run_command(job):
     except AttributeError:
         # Using executors that don't have a mem_per_worker attribute.
         pass
-    return RUN_COMMANDS[job_size]
+
+    def job_run_command(command_line, inputs=(), stdout=None, stderr=None):
+        return command_line
+
+    job_run_command.__name__ = task_label
+
+    return RUN_DECORATORS[job_size](job_run_command)
 
 
 @parsl.python_app(executors=['submit-node'])
