@@ -142,6 +142,7 @@ def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
                      wq_max_retries=1, port=9000, monitoring_debug=False,
                      monitoring_hub_port=None, monitoring_interval=60,
+                     coprocess=False,
                      **unused_options):
     """
     Load a parsl config for a WorkQueueExecutor and the supplied provider.
@@ -149,7 +150,7 @@ def workqueue_config(provider=None, monitoring=False, workflow_name=None,
     executors = [WorkQueueExecutor(label='work_queue', port=port,
                                    shared_fs=True, provider=provider,
                                    worker_options=worker_options,
-                                   autolabel=False,
+                                   autolabel=False, coprocess=coprocess,
                                    max_retries=wq_max_retries),
                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
 
