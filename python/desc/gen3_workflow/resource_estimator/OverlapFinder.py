@@ -13,7 +13,7 @@ import lsst.sphgeom
 import lsst.log
 from lsst.afw.cameraGeom import DetectorType
 from lsst.obs.base.utils import createInitialSkyWcsFromBoresight
-from lsst.obs.lsst import LsstCamMapper
+from lsst.obs.lsst import LsstCam
 
 lsst.log.setLevel('', lsst.log.ERROR)
 
@@ -22,7 +22,7 @@ __all__ = ['SkyMapPolygons', 'OverlapFinder', 'extract_coadds',
            'unique_tuples']
 
 
-LSSTCAM = LsstCamMapper().camera
+LSSTCAM = LsstCam.getCamera()
 
 class SkyMapPolygons:
 
