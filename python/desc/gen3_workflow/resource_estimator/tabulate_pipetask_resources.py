@@ -158,7 +158,8 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         pt_data['cpu_hours'].append(cpu_hours_total)
         pt_data['max_GB'].append(np.max(memory))
         pt_data['avg_GB'].append(np.mean(memory))
-        print(time.time() - t0)
+        if verbose:
+            print(time.time() - t0)
 
     for task_name in ('mergeCoaddDetections', 'deblend',
                       'mergeCoaddMeasurements'):
@@ -198,7 +199,7 @@ def tabulate_data_product_sizes(qgraph_file, repo, collection):
     by dataset type with tuple of (mean file size (GB), std file sizes (GB),
     number of files in examples).
     """
-    qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+    qgraph = QuantumGraph.loadUri(qgraph_file)
 
     butler = Butler(repo, collections=[collection])
     registry = butler.registry
