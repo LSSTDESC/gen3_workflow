@@ -140,7 +140,7 @@ def set_config_options(retries, monitoring, workflow_name, checkpoint,
 
 def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                      checkpoint=False,  retries=1, worker_options="",
-                     wq_max_retries=1, port=9000, monitoring_debug=False,
+                     wq_max_retries=1, port=0, monitoring_debug=False,
                      monitoring_hub_port=None, monitoring_interval=60,
                      coprocess=False,
                      **unused_options):
