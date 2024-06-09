@@ -7,7 +7,7 @@ from collections import defaultdict
 import json
 import numpy as np
 import pandas as pd
-from lsst.daf.butler import Butler, DimensionUniverse
+from lsst.daf.butler import Butler
 from lsst.pipe.base.graph import QuantumGraph
 
 
@@ -98,8 +98,8 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         Dataframe with the number of visits for each band-tract-patch
         combination.
     task_counts : dict
-        Dictionary of number of instances per task. Only counts for 'isr',
-        'makeWarp', and 'assembleCoadd' are used.
+        Dictionary of number of instances per task. Only counts for 'isr'
+        and 'makeWarp'
     pipetask_funcs : dict
         Dictionary of functions, keyed by task type.  Each function should
         return a tuple (cpu_time in hours, memory usage in GB) taking
@@ -119,7 +119,8 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
 
     # sensor-visits:
     num_ccd_visits = task_counts['isr']
-    for task_name in 'isr characterizeImage calibrate'.split():
+    for task_name in ('isr', 'characterizeImage', 'calibrate',
+                      'writeSourceTable', 'transformSourceTable'):
         if verbose:
             print("processing", task_name)
         pt_data['pipetask'].append(task_name)
@@ -142,7 +143,10 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
     pt_data['avg_GB'].append(mem_GB)
 
     for task_name in ('assembleCoadd', 'detection', 'measure',
-                      'forcedPhotCoadd'):
+                      'forcedPhotCoadd', 'selectGoodSeeingVisits',
+                      'templateGen', 'selectDeepCoaddVisits',
+                      'healSparsePropertyMaps',
+                      ):
         if verbose:
             print("processing", task_name, end=' ')
         pt_data['pipetask'].append(task_name)
@@ -158,10 +162,11 @@ def tabulate_pipetask_resources(coadd_df, task_counts, pipetask_funcs,
         pt_data['cpu_hours'].append(cpu_hours_total)
         pt_data['max_GB'].append(np.max(memory))
         pt_data['avg_GB'].append(np.mean(memory))
-        print(time.time() - t0)
+        if verbose:
+            print(time.time() - t0)
 
     for task_name in ('mergeCoaddDetections', 'deblend',
-                      'mergeCoaddMeasurements'):
+                      'mergeMeasurements'):
         try:
             cpu_hours, mem_GB = pipetask_funcs[task_name]()
         except KeyError:
@@ -198,7 +203,7 @@ def tabulate_data_product_sizes(qgraph_file, repo, collection):
     by dataset type with tuple of (mean file size (GB), std file sizes (GB),
     number of files in examples).
     """
-    qgraph = QuantumGraph.loadUri(qgraph_file, DimensionUniverse())
+    qgraph = QuantumGraph.loadUri(qgraph_file)
 
     butler = Butler(repo, collections=[collection])
     registry = butler.registry
@@ -223,8 +228,8 @@ def tabulate_data_product_sizes(qgraph_file, repo, collection):
     return data
 
 
-def total_node_hours(pt_df, cpu_factor=8, cores_per_node=68,
-                     memory_per_node=96, memory_min=10):
+def total_node_hours(pt_df, cpu_factor=1, cores_per_node=128,
+                     memory_per_node=512, memory_min=10):
     """
     Estimate the total number of node hours to do an image processing
     run.

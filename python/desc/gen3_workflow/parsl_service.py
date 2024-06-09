@@ -496,7 +496,7 @@ class ParslGraph(dict):
             my_query += f' and status == "{status}"'
         if query is not None:
             my_query = ' and '.join((my_query, query))
-        return list(self.df.query(my_query)['job_name'])
+        return sorted(self.df.query(my_query)['job_name'])
 
     def status(self, use_logs=False):
         """Print a summary of the workflow status."""
@@ -617,7 +617,7 @@ class ParslGraph(dict):
 
         return ParslGraph(generic_workflow, config, do_init=False, dfk=dfk)
 
-    def run(self, jobs=None, block=False):
+    def run(self, jobs=None, block=False, shutdown=True):
         """
         Run the encapsulated workflow by requesting the futures of
         the requested jobs or of those at the endpoints of the DAG.
@@ -638,8 +638,9 @@ class ParslGraph(dict):
             # before the futures resolve.
             _ = [future.exception() for future in futures]
             self.finalize()
-            # Shutdown and dispose of the DataFlowKernel.
-            self.shutdown()
+            if shutdown:
+                # Shutdown and dispose of the DataFlowKernel.
+                self.shutdown()
 
     def shutdown(self):
         """Shutdown and dispose of the Parsl DataFlowKernel.  This will stop
