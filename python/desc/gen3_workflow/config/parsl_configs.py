@@ -6,7 +6,6 @@ import parsl
 from parsl.executors import WorkQueueExecutor, ThreadPoolExecutor
 from parsl.providers import LocalProvider, SlurmProvider, PBSProProvider
 from parsl.launchers import SrunLauncher, MpiExecLauncher
-from parsl.channels import LocalChannel
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.addresses import address_by_hostname
 from parsl.utils import get_all_checkpoints
@@ -103,7 +102,6 @@ def pbspro_provider(nodes_per_block=1, qos='expert', parallelism=0,
     provider_options = dict(walltime=walltime,
                             scheduler_options=scheduler_options,
                             queue=qos,
-                            channel=LocalChannel(),
                             nodes_per_block=nodes_per_block,
                             worker_init=worker_init,
                             cpus_per_node=cpus_per_node,
