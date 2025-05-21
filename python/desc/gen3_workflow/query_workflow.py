@@ -55,7 +55,7 @@ def query_workflow(workflow_name, db_file='./runinfo/monitoring.db'):
         raise FileNotFoundError(db_file)
     with sqlite3.connect(db_file) as conn:
         df = pd.read_sql('select * from workflow where '
-                         f'workflow_name="{workflow_name}"', conn)
+                         f"workflow_name='{workflow_name}'", conn)
         if df.empty:
             raise FileNotFoundError(f'workflow {workflow_name}'
                                     'not in {db_file}')
@@ -64,7 +64,7 @@ def query_workflow(workflow_name, db_file='./runinfo/monitoring.db'):
                 from task join status on task.task_id=status.task_id and
                 task.run_id=status.run_id join workflow
                 on task.run_id=workflow.run_id where
-                workflow.workflow_name="{workflow_name}"
+                workflow.workflow_name='{workflow_name}'
                 and task.task_stderr is not null
                 order by task.task_stderr, status.timestamp desc'''
 

@@ -31,11 +31,11 @@ class SurveyRegion:
     def intersects(self, polygon):
         return self.polygon.intersects(polygon)
 
-    def draw_boundary(self, color=None):
+    def draw_boundary(self, color=None, linewidth=None):
         ra = (self.ra_min, self.ra_max, self.ra_max, self.ra_min, self.ra_min)
         dec = (self.dec_min, self.dec_min, self.dec_max, self.dec_max,
                self.dec_min)
-        plt.plot(ra, dec, color=color)
+        plt.plot(ra, dec, color=color, linewidth=linewidth)
 
     def get_patch_overlaps(self, skymap):
         overlaps = []
