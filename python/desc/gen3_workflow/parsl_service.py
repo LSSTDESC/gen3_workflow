@@ -658,9 +658,8 @@ class ParslGraph(dict):
         butler to the destination repo butler."""
         log_file = os.path.join(self.config['submitPath'], 'logging',
                                 'final_merge_job.log')
-        command = (f"(bash {self.config['submitPath']}/final_job.bash "
-                   f"{self.qgraph_file} "
-                   f"{self.config['butlerConfig']}) >& {log_file}")
+        command = f"(bash {_cmdline(self.gwf.get_final())}) &> {log_file}"
+        command = command.replace("<FILE:runQgraphFile>", self.qgraph_file)
         subprocess.check_call(command, shell=True, executable='/bin/bash')
 
 
