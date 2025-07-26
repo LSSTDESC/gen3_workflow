@@ -690,7 +690,7 @@ class ParslService(BaseWmsService):
         print(f'Run Name: {workflow.name}')
         return workflow
 
-    def submit(self, workflow):
+    def submit(self, workflow, **kwargs):
         """
         Submit a workflow for execution.
 
