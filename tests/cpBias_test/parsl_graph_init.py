@@ -1,3 +1,4 @@
 #!/usr/bin/env python
 from desc.gen3_workflow import start_pipeline
-start_pipeline('bps_cpBias.yaml')
+graph = start_pipeline('bps_cpBias.yaml')
+graph.shutdown()
