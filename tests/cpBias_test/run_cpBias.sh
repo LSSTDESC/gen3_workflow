@@ -10,6 +10,8 @@ fi
 repo=test_repo
 instrument=lsst.obs.lsst.LsstCam
 
+export BUTLER_CONFIG=`pwd -P`/${repo}
+
 butler create ${repo}
 butler register-instrument ${repo} ${instrument}
 butler write-curated-calibrations --collection LSSTCam/calib ${repo} ${instrument}

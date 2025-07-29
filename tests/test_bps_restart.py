@@ -33,17 +33,16 @@ class BpsRestartTestCase(unittest.TestCase):
         """Test the bps restart command for the Parsl plugin."""
         # Run bps restart --id <workflow_name>.
         os.chdir(self.tmp_dir)
-        os.environ['PWD'] = self.tmp_dir
+        test_repo = os.path.realpath(os.path.join(self.tmp_dir, 'test_repo'))
+        os.environ['BUTLER_CONFIG'] = test_repo
         os.environ['BPS_WMS_SERVICE_CLASS'] = 'desc.gen3_workflow.ParslService'
         workflow_name = 'u/lsst/bot_13035_R22_S11_cpBias/test_run'
         command = f'bps restart --id {workflow_name}'
         subprocess.check_call(command, shell=True)
         # Create a butler and check that the expected superbias was
         # created.
-        butler = daf_butler.Butler(os.path.join(self.tmp_dir, 'test_repo'),
-                                   collections=[workflow_name])
-        dsrefs = list(set(butler.registry.queryDatasets('bias',
-                                                        instrument='LSSTCam')))
+        butler = daf_butler.Butler(test_repo, collections=[workflow_name])
+        dsrefs = butler.query_datasets('bias', instrument='LSSTCam')
         self.assertEqual(len(dsrefs), 1)
         self.assertEqual(dsrefs[0].dataId['detector'], 94)
 
