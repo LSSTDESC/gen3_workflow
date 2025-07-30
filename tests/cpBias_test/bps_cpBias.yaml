@@ -5,7 +5,7 @@ pipelineYaml: "${PWD}/cpBias.yaml"
 
 payload:
   payloadName: bot_13035_R22_S11_cpBias
-  butlerConfig: ${PWD}/test_repo
+  butlerConfig: ${BUTLER_CONFIG}
   inCollection: LSSTCam/raw/all,LSSTCam/calib
   dataQuery: "instrument='LSSTCam'"
   outputRun: "u/lsst/{payloadName}/test_run"
