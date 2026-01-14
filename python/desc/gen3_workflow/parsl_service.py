@@ -475,7 +475,7 @@ class ParslGraph(dict):
     def qgraph_file(self):
         if self._qgraph_file is None:
             self._qgraph_file = glob.glob(os.path.join(
-                self.config['submitPath'], '*.qgraph'))[0]
+                self.config['submitPath'], '*.qg'))[0]
         return self._qgraph_file
 
     @property
